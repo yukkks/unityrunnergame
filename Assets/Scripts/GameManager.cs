@@ -6,6 +6,8 @@ using UnityEngine.Networking;
 using System.Collections;
 using System;
 using System.Text;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 
 public class GameManager : MonoBehaviour
 {
@@ -51,6 +53,41 @@ public class GameManager : MonoBehaviour
     public string gameId = "scifirunner";
     public TMP_Text globalBestText;
 
+    [Header("Post Processing")]
+    public bool enablePostProcessing = true;
+    [Range(0f, 5f)]
+    public float bloomIntensity = 1.1f;
+    [Range(0f, 1f)]
+    public float bloomThreshold = 0.9f;
+    [Range(0f, 1f)]
+    public float vignetteIntensity = 0.25f;
+    [Range(-50f, 50f)]
+    public float exposure = 0f;
+    [Range(-100f, 100f)]
+    public float contrast = 12f;
+    [Range(-100f, 100f)]
+    public float saturation = 8f;
+    [Range(0f, 1f)]
+    public float filmGrainIntensity = 0.18f;
+
+    [Header("Atmosphere")]
+    public bool enableFog = true;
+    public FogMode fogMode = FogMode.ExponentialSquared;
+    public Color fogColor = new Color(0.16f, 0.18f, 0.22f, 1f);
+    [Range(0f, 0.05f)]
+    public float fogDensity = 0.008f;
+
+    [Header("Lighting")]
+    public Light keyLight;
+    [Range(0f, 5f)]
+    public float keyLightIntensity = 1.35f;
+    public Color keyLightColor = new Color(0.95f, 0.97f, 1f, 1f);
+    public bool autoCreateRimLight = true;
+    public Color rimLightColor = new Color(0.35f, 0.7f, 1f, 1f);
+    [Range(0f, 2f)]
+    public float rimLightIntensity = 0.6f;
+    public Vector3 rimLightEuler = new Vector3(18f, 140f, 0f);
+
     [Header("Audio")]
     public AudioController audioController;
 
@@ -94,6 +131,9 @@ public class GameManager : MonoBehaviour
         EnsureUi();
         EnsureAudio();
         SetupEnvironmentMotion();
+        EnsureLighting();
+        EnsurePostProcessing();
+        ApplyAtmosphere();
     }
 
     void Start()
@@ -517,6 +557,101 @@ public class GameManager : MonoBehaviour
     {
         if (!text || !uiFont) return;
         text.font = uiFont;
+    }
+
+    void EnsureLighting()
+    {
+        if (!keyLight)
+        {
+            Light[] lights = FindObjectsOfType<Light>();
+            foreach (var l in lights)
+            {
+                if (l.type == LightType.Directional)
+                {
+                    keyLight = l;
+                    break;
+                }
+            }
+        }
+
+        if (keyLight)
+        {
+            keyLight.intensity = keyLightIntensity;
+            keyLight.color = keyLightColor;
+        }
+
+        if (autoCreateRimLight && !GameObject.Find("RimLight"))
+        {
+            GameObject rim = new GameObject("RimLight");
+            Light rimLight = rim.AddComponent<Light>();
+            rimLight.type = LightType.Directional;
+            rimLight.color = rimLightColor;
+            rimLight.intensity = rimLightIntensity;
+            rim.transform.rotation = Quaternion.Euler(rimLightEuler);
+        }
+    }
+
+    void ApplyAtmosphere()
+    {
+        if (!enableFog)
+        {
+            RenderSettings.fog = false;
+            return;
+        }
+        RenderSettings.fog = true;
+        RenderSettings.fogMode = fogMode;
+        RenderSettings.fogColor = fogColor;
+        RenderSettings.fogDensity = fogDensity;
+        RenderSettings.ambientMode = AmbientMode.Skybox;
+    }
+
+    void EnsurePostProcessing()
+    {
+        if (!enablePostProcessing) return;
+
+        Volume volume = FindObjectOfType<Volume>();
+        if (!volume)
+        {
+            GameObject volObj = new GameObject("GlobalVolume");
+            volume = volObj.AddComponent<Volume>();
+        }
+
+        volume.isGlobal = true;
+        if (!volume.profile)
+        {
+            volume.profile = ScriptableObject.CreateInstance<VolumeProfile>();
+        }
+
+        VolumeProfile profile = volume.profile;
+
+        if (!profile.TryGet(out Bloom bloom))
+        {
+            bloom = profile.Add<Bloom>(true);
+        }
+        bloom.intensity.value = bloomIntensity;
+        bloom.threshold.value = bloomThreshold;
+
+        if (!profile.TryGet(out ColorAdjustments color))
+        {
+            color = profile.Add<ColorAdjustments>(true);
+        }
+        color.postExposure.value = exposure;
+        color.contrast.value = contrast;
+        color.saturation.value = saturation;
+
+        if (!profile.TryGet(out Vignette vignette))
+        {
+            vignette = profile.Add<Vignette>(true);
+        }
+        vignette.intensity.value = vignetteIntensity;
+        vignette.smoothness.value = 0.6f;
+
+        if (!profile.TryGet(out FilmGrain grain))
+        {
+            grain = profile.Add<FilmGrain>(true);
+        }
+        grain.type.value = FilmGrainLookup.Thin1;
+        grain.intensity.value = filmGrainIntensity;
     }
 
     bool HasSupabaseConfig()

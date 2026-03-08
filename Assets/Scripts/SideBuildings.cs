@@ -1,4 +1,7 @@
 using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 public class SideBuildings : MonoBehaviour
 {
@@ -23,6 +26,16 @@ public class SideBuildings : MonoBehaviour
     public float metallic = 0.05f;
     public float smoothness = 0.6f;
     public bool useWindowEmission = true;
+
+    [Header("Prefabs")]
+    public bool usePrefabBuildings = true;
+    public GameObject[] buildingPrefabs;
+    public Vector2 prefabScaleRange = new Vector2(0.8f, 1.4f);
+    public bool alignPrefabToGround = true;
+    public float prefabYOffset = 0f;
+    public bool randomYaw = false;
+    public float leftYaw = 90f;
+    public float rightYaw = -90f;
 
     [Header("Shape")]
     [Range(0f, 1f)]
@@ -60,7 +73,10 @@ public class SideBuildings : MonoBehaviour
 
         if (countPerSide <= 0) return;
 
-        BuildMaterialPool();
+        if (!UsePrefabs())
+        {
+            BuildMaterialPool();
+        }
 
         loopLength = countPerSide * spacing;
 
@@ -70,8 +86,8 @@ public class SideBuildings : MonoBehaviour
         for (int i = 0; i < countPerSide; i++)
         {
             float z = startZ + i * spacing;
-            leftBuildings[i] = CreateBuilding("Building_L_" + i, -sideOffset, z);
-            rightBuildings[i] = CreateBuilding("Building_R_" + i, sideOffset, z + spacing * 0.5f);
+            leftBuildings[i] = CreateBuilding("Building_L_" + i, -sideOffset, z, true);
+            rightBuildings[i] = CreateBuilding("Building_R_" + i, sideOffset, z + spacing * 0.5f, false);
         }
     }
 
@@ -83,11 +99,33 @@ public class SideBuildings : MonoBehaviour
         }
     }
 
-    Transform CreateBuilding(string name, float x, float z)
+    Transform CreateBuilding(string name, float x, float z, bool isLeft)
     {
         GameObject root = new GameObject(name);
         root.transform.SetParent(transform);
         root.transform.localPosition = new Vector3(x, 0f, z);
+
+        if (UsePrefabs())
+        {
+            GameObject prefab = GetPrefab();
+            if (prefab)
+            {
+                GameObject instance = Instantiate(prefab, root.transform);
+                instance.transform.localPosition = Vector3.zero;
+                float scale = Random.Range(prefabScaleRange.x, prefabScaleRange.y);
+                instance.transform.localScale = Vector3.one * scale;
+
+                float yaw = isLeft ? leftYaw : rightYaw;
+                if (randomYaw) yaw = Random.Range(0f, 360f);
+                instance.transform.localRotation = Quaternion.Euler(0f, yaw, 0f);
+
+                if (alignPrefabToGround)
+                {
+                    AlignToGround(instance.transform, baseY + prefabYOffset);
+                }
+                return root.transform;
+            }
+        }
 
         float height = Random.Range(heightRange.x, heightRange.y);
         float width = Random.Range(widthRange.x, widthRange.y);
@@ -253,4 +291,83 @@ public class SideBuildings : MonoBehaviour
         tex.Apply();
         return tex;
     }
+
+    bool UsePrefabs()
+    {
+        return usePrefabBuildings && buildingPrefabs != null && buildingPrefabs.Length > 0;
+    }
+
+    GameObject GetPrefab()
+    {
+        if (buildingPrefabs == null || buildingPrefabs.Length == 0) return null;
+        int index = Random.Range(0, buildingPrefabs.Length);
+        return buildingPrefabs[index];
+    }
+
+    void AlignToGround(Transform target, float groundY)
+    {
+        if (!target) return;
+        Renderer[] renderers = target.GetComponentsInChildren<Renderer>();
+        if (renderers == null || renderers.Length == 0) return;
+
+        Bounds bounds = renderers[0].bounds;
+        for (int i = 1; i < renderers.Length; i++)
+        {
+            bounds.Encapsulate(renderers[i].bounds);
+        }
+
+        float offset = groundY - bounds.min.y;
+        target.position += new Vector3(0f, offset, 0f);
+    }
+
+#if UNITY_EDITOR
+    void OnValidate()
+    {
+        if (usePrefabBuildings && (buildingPrefabs == null || buildingPrefabs.Length == 0))
+        {
+            AutoPopulatePrefabs();
+        }
+    }
+
+    [ContextMenu("Auto Populate Prefabs")]
+    void AutoPopulatePrefabs()
+    {
+        string[] searchIn = new string[] { "Assets/PolygonSciFiCity/Prefabs/Buildings" };
+        string[] guids = AssetDatabase.FindAssets("t:prefab", searchIn);
+        if (guids == null || guids.Length == 0) return;
+
+        var list = new System.Collections.Generic.List<GameObject>();
+        foreach (string guid in guids)
+        {
+            string path = AssetDatabase.GUIDToAssetPath(guid);
+            string file = System.IO.Path.GetFileNameWithoutExtension(path);
+            if (file.Contains("Section")) continue;
+            if (file.Contains("Interior")) continue;
+
+            bool allow =
+                file.Contains("Background") ||
+                file.Contains("Large") ||
+                file.Contains("Industrial") ||
+                file.Contains("Advanced") ||
+                file.Contains("Power") ||
+                file.Contains("City_Wall") ||
+                file.Contains("Raised") ||
+                file.Contains("Bank") ||
+                file.Contains("LandingPad") ||
+                file.Contains("StripClub") ||
+                file.Contains("Shack");
+
+            if (!allow) continue;
+
+            GameObject prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            if (prefab) list.Add(prefab);
+        }
+
+        if (list.Count > 0)
+        {
+            buildingPrefabs = list.ToArray();
+            EditorUtility.SetDirty(this);
+        }
+    }
+#endif
 }

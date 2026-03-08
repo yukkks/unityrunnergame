@@ -26,7 +26,7 @@ RenderSettings:
   m_AmbientIntensity: 1
   m_AmbientMode: 0
   m_SubtractiveShadowColor: {r: 0.42, g: 0.478, b: 0.627, a: 1}
-  m_SkyboxMaterial: {fileID: 2100000, guid: 3e8efb9e60ace40038b8440caec9073c, type: 2}
+  m_SkyboxMaterial: {fileID: 2100000, guid: 7b4ca1e8cc4ba2242bec6427db97eba1, type: 2}
   m_HaloStrength: 0.5
   m_FlareStrength: 1
   m_FlareFadeSpeed: 3
@@ -375,6 +375,62 @@ MonoBehaviour:
   metallic: 0.05
   smoothness: 0.6
   useWindowEmission: 1
+  usePrefabBuildings: 1
+  buildingPrefabs:
+  - {fileID: 1812538408343958, guid: 4539a9f265debe14db54385bf22e5389, type: 3}
+  - {fileID: 1413420337584366, guid: 6c47e359451615e409f3d203232f5ee5, type: 3}
+  - {fileID: 1402684859980934, guid: f001aad6219fda044ae60555f9109544, type: 3}
+  - {fileID: 1890822468713380, guid: 65f76c5f923964045833f09a3f767a16, type: 3}
+  - {fileID: 1331304823789064, guid: 31dade7a3305059458fd6662c8492e46, type: 3}
+  - {fileID: 1716520578374284, guid: 8ad4c6a0a99ada5458178e9156b85b0e, type: 3}
+  - {fileID: 1879065352345028, guid: 3c37ed3fc4c8659488e2a193810bb213, type: 3}
+  - {fileID: 1421071438843018, guid: 1cfc671741fa1cc47824540b62db0c87, type: 3}
+  - {fileID: 1257914698886634, guid: c2fad3760a0f8674482ad6a980264ee4, type: 3}
+  - {fileID: 1418953355699804, guid: 2b4f4c6dd9003ab49ac2cb68ebc4a3b4, type: 3}
+  - {fileID: 1790357993503062, guid: 5916a3b9673d1984085cdfe02a594bd3, type: 3}
+  - {fileID: 1970317999240876, guid: c55cddf0517aed545bedf9b927124c15, type: 3}
+  - {fileID: 1824966148789740, guid: 0df771ff55339404a8368cc1be02d861, type: 3}
+  - {fileID: 1839160888479900, guid: 94634f97a9c7b83498a8e59c7c8f115b, type: 3}
+  - {fileID: 1899916590547110, guid: 049ba413acf1dae40a25c7020b124049, type: 3}
+  - {fileID: 1490544297967454, guid: 1337ff3f0ba67b743a229bd87105578f, type: 3}
+  - {fileID: 1914798128553448, guid: 346d59f0a37939843934a260b13f9d2e, type: 3}
+  - {fileID: 1131533020855282, guid: ce31bf417050b6843b2ef2efaed2e4a8, type: 3}
+  - {fileID: 1398898131958834, guid: 98be61c6635b7784aa91fcee4f0df5ff, type: 3}
+  - {fileID: 1215542030005526, guid: f0274b246cd36f849b6f60898f359f1e, type: 3}
+  - {fileID: 1870082208004184, guid: 8feb2335a05b64642a1d35a6a73cb21c, type: 3}
+  - {fileID: 1236945308426656, guid: 04c79e9d6b44d414c9decaeab2c70bd7, type: 3}
+  - {fileID: 1926591690556932, guid: ec40f18bb650f6640a5de7a5ed9e7f7c, type: 3}
+  - {fileID: 1219436796278858, guid: e1494d10d49c1b3448e684cac6f7ec0d, type: 3}
+  - {fileID: 1868077915973288, guid: e9a4f67b7f329ca4abf5de824f66db82, type: 3}
+  - {fileID: 1244541953866960, guid: c037f4cd64354fd428bbf6b6007c235d, type: 3}
+  - {fileID: 1581616631694982, guid: 6053e238c2ee3e4499318f9353b3587f, type: 3}
+  - {fileID: 1117933066562142, guid: ff256aac7fa51c54db71970879315bcc, type: 3}
+  - {fileID: 1169408063739096, guid: ed95a1d27b321874cbe7017a50a4c292, type: 3}
+  - {fileID: 1998814181949766, guid: 05cce10c53c896f4495809af7a45bbe1, type: 3}
+  - {fileID: 1045421697045050, guid: 8a21e998caeaac347b4127cda7988cf3, type: 3}
+  - {fileID: 1372433763850600, guid: 5f257b0a01530674191819b4bf513840, type: 3}
+  - {fileID: 1604459025866760, guid: 60378a264f113174c825ec6ec6fcb135, type: 3}
+  - {fileID: 1788266281613662, guid: 9bb1305f3dbe91e458d1319699143c30, type: 3}
+  - {fileID: 1998124486261192, guid: a772ff3690203ee428eb1a2ef2ed8661, type: 3}
+  - {fileID: 1927133134700738, guid: 163acdb00268b5e498aad6a2f0828b90, type: 3}
+  - {fileID: 1982505895318872, guid: 99e8bea94a6b2ff42b52f59dfea5bce6, type: 3}
+  - {fileID: 1948815842650054, guid: 19f7afc4823b6aa45b3f63b28e1360aa, type: 3}
+  - {fileID: 1696609007649104, guid: 7aaa490d804da864bb2ab5258370fdfe, type: 3}
+  - {fileID: 1943938442306626, guid: 686c3e339f3c07f438170547ac7aff50, type: 3}
+  - {fileID: 1391373417113574, guid: a279d9ca726ccb34a923266d9c5f9987, type: 3}
+  - {fileID: 1650256952041124, guid: 0fafb1450aa63ce469d1b0dde39971c1, type: 3}
+  - {fileID: 1784888299007024, guid: 3144fdf31c6d99242985622dcb79b6c6, type: 3}
+  - {fileID: 1940365897384440, guid: f26a6a01921a0cc44a493b8424859c38, type: 3}
+  - {fileID: 1499422271495080, guid: 0935701b68167c54a9e2ee7fe6f1d473, type: 3}
+  - {fileID: 1839877879696270, guid: 84c3b5bbf4f75624792d3b03f1c2b546, type: 3}
+  - {fileID: 1444634141056392, guid: 1c0266737a5eeb24cad25970b29bc2b9, type: 3}
+  - {fileID: 1437430036701050, guid: fda403bfb7f9ddb4bb2f8dce1834ea75, type: 3}
+  prefabScaleRange: {x: 0.8, y: 1.4}
+  alignPrefabToGround: 1
+  prefabYOffset: 0
+  randomYaw: 0
+  leftYaw: 90
+  rightYaw: -90
   topBlockChance: 0.7
   topScaleRange: {x: 0.55, y: 0.85}
   topHeightRange: {x: 0.25, y: 0.6}
@@ -5376,6 +5432,25 @@ MonoBehaviour:
   supabaseTable: scores
   gameId: scifirunner
   globalBestText: {fileID: 0}
+  enablePostProcessing: 1
+  bloomIntensity: 1.1
+  bloomThreshold: 0.9
+  vignetteIntensity: 0.25
+  exposure: 0
+  contrast: 12
+  saturation: 8
+  filmGrainIntensity: 0.18
+  enableFog: 1
+  fogMode: 3
+  fogColor: {r: 0.16, g: 0.18, b: 0.22, a: 1}
+  fogDensity: 0.008
+  keyLight: {fileID: 0}
+  keyLightIntensity: 1.35
+  keyLightColor: {r: 0.95, g: 0.97, b: 1, a: 1}
+  autoCreateRimLight: 1
+  rimLightColor: {r: 0.35, g: 0.7, b: 1, a: 1}
+  rimLightIntensity: 0.6
+  rimLightEuler: {x: 18, y: 140, z: 0}
   audioController: {fileID: 0}
   enableEnvironmentMotion: 1
   scrollObjectNames:
@@ -5628,7 +5703,7 @@ MonoBehaviour:
     m_Bits: 1
   m_VolumeTrigger: {fileID: 0}
   m_VolumeFrameworkUpdateModeOption: 2
-  m_RenderPostProcessing: 0
+  m_RenderPostProcessing: 1
   m_Antialiasing: 0
   m_AntialiasingQuality: 2
   m_StopNaN: 0
