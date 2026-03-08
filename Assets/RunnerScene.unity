@@ -149,14 +149,23 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Spawner
   obstaclePrefab: {fileID: 5363255825161383689, guid: e9ddb377246b24da89c29561d814d139, type: 3}
+  coinPrefab: {fileID: 0}
   laneOffset: 1.2
   spawnY: 0.8
   spawnZ: 12
+  coinY: 0.9
+  coinZ: 12
   startMinInterval: 0.9
   startMaxInterval: 1.4
   endMinInterval: 0.35
   endMaxInterval: 0.7
   rampDuration: 60
+  usePatterns: 1
+  coinSpawnChance: 1
+  coinStreaks: 1
+  coinStreakLength: {x: 3, y: 6}
+  coinStreakChance: 0.35
+  bonusLaneChance: 0.08
 --- !u!4 &31877909
 Transform:
   m_ObjectHideFlags: 0
@@ -360,8 +369,15 @@ MonoBehaviour:
   - {fileID: 2100000, guid: f6b7cf8ccc6164d1685bdcd787deadfd, type: 2}
   buildingMaterial: {fileID: 2100000, guid: 699df7ab7137b466c90754f3b0a849f7, type: 2}
   baseColor: {r: 0.05, g: 0.07, b: 0.1, a: 1}
-  emissionColor: {r: 0, g: 0.6, b: 1, a: 1}
+  windowColor: {r: 1, g: 0.82, b: 0.55, a: 1}
   emissionIntensity: 0.8
+  windowTiling: {x: 1, y: 4}
+  metallic: 0.05
+  smoothness: 0.6
+  useWindowEmission: 1
+  topBlockChance: 0.7
+  topScaleRange: {x: 0.55, y: 0.85}
+  topHeightRange: {x: 0.25, y: 0.6}
 --- !u!1 &279190935
 GameObject:
   m_ObjectHideFlags: 0
@@ -5354,6 +5370,20 @@ MonoBehaviour:
   uiFont: {fileID: 11400000, guid: dc058265840df4c0089db04148709b1a, type: 2}
   gameOverFontSize: 44
   overlayCornerRadius: 24
+  enableGlobalTopScore: 1
+  supabaseUrl: https://axbzrtuvdwddixhbpdiz.supabase.co
+  supabaseAnonKey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF4YnpydHV2ZHdkZGl4aGJwZGl6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5NTUwMzIsImV4cCI6MjA4ODUzMTAzMn0.BpuxVSfS2D9BxHM1vF6loDIANVPgSpxZT5mPXxvCreM
+  supabaseTable: scores
+  gameId: scifirunner
+  globalBestText: {fileID: 0}
+  audioController: {fileID: 0}
+  enableEnvironmentMotion: 1
+  scrollObjectNames:
+  - Ground
+  scrollBaseSpeed: 0.35
+  scrollSpeedMultiplier: 0.02
+  scrollDirection: {x: 0, y: -1}
+  scrollTiling: {x: 1, y: 6}
 --- !u!4 &812159843
 Transform:
   m_ObjectHideFlags: 0
@@ -5710,6 +5740,10 @@ MonoBehaviour:
   smooth: 8
   tiltAmount: 6
   tiltSmooth: 8
+  laneRollKick: 6
+  laneRollReturn: 10
+  fovKick: 3.5
+  fovReturn: 6
 --- !u!1 &1300997378
 GameObject:
   m_ObjectHideFlags: 0
@@ -5847,6 +5881,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerController
   laneOffset: 1.2
   laneLerp: 10
+  cameraFollow: {fileID: 0}
+  thruster: {fileID: 0}
+  thrusterColor: {r: 1, g: 1, b: 1, a: 1}
+  thrusterRate: 30
+  thrusterLocalOffset: {x: 0, y: 0.2, z: -0.4}
+  crashFxPrefab: {fileID: 0}
 --- !u!54 &1482408550
 Rigidbody:
   m_ObjectHideFlags: 0

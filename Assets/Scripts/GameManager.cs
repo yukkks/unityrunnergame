@@ -2,6 +2,10 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using TMPro;
 using UnityEngine.UI;
+using UnityEngine.Networking;
+using System.Collections;
+using System;
+using System.Text;
 
 public class GameManager : MonoBehaviour
 {
@@ -38,6 +42,15 @@ public class GameManager : MonoBehaviour
     [Range(8, 64)]
     public int overlayCornerRadius = 24;
 
+    [Header("Supabase (Global Top Score)")]
+    public bool enableGlobalTopScore = true;
+    [Tooltip("https://<project>.supabase.co")]
+    public string supabaseUrl;
+    public string supabaseAnonKey;
+    public string supabaseTable = "scores";
+    public string gameId = "scifirunner";
+    public TMP_Text globalBestText;
+
     [Header("Audio")]
     public AudioController audioController;
 
@@ -56,6 +69,8 @@ public class GameManager : MonoBehaviour
     public float moveSpeed { get; private set; }
 
     private int bestScore;
+    private int globalBestScore;
+    private bool globalBestLoaded;
     private const string BestScoreKey = "BestScore";
 
     private Material[] scrollMaterials;
@@ -85,6 +100,10 @@ public class GameManager : MonoBehaviour
     {
         SetState(GameState.Waiting);
         UpdateUi();
+        if (HasSupabaseConfig())
+        {
+            StartCoroutine(FetchGlobalBest());
+        }
     }
 
     void Update()
@@ -207,6 +226,7 @@ public class GameManager : MonoBehaviour
     {
         if (State != GameState.Running) return;
         CommitBestScore();
+        TrySubmitGlobalBest();
         UpdateUi();
         UpdateGameOverUi();
         SetState(GameState.GameOver);
@@ -234,6 +254,10 @@ public class GameManager : MonoBehaviour
         if (scoreText) scoreText.text = "SCORE " + scoreInt.ToString();
         if (bestScoreText) bestScoreText.text = "BEST " + bestDisplay.ToString();
         if (distanceText) distanceText.text = "DIST " + distanceInt.ToString() + "m";
+        if (globalBestText)
+        {
+            globalBestText.text = globalBestLoaded ? "TOP " + globalBestScore.ToString() : "TOP --";
+        }
     }
 
     void EnsureUi()
@@ -276,6 +300,26 @@ public class GameManager : MonoBehaviour
             distanceText.fontSize = 36;
         }
         StyleHudText(distanceText, TextAlignmentOptions.TopLeft);
+
+        if (!globalBestText)
+        {
+            globalBestText = CreateUiText(hudParent, "GlobalBestText", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -110f), new Vector2(260f, 60f), 30, TextAlignmentOptions.Top);
+        }
+        else if (globalBestText.transform.parent != hudParent)
+        {
+            globalBestText.transform.SetParent(hudParent, false);
+        }
+        else
+        {
+            RectTransform rect = globalBestText.rectTransform;
+            rect.anchorMin = new Vector2(0.5f, 1f);
+            rect.anchorMax = new Vector2(0.5f, 1f);
+            rect.pivot = new Vector2(0.5f, 1f);
+            rect.anchoredPosition = new Vector2(0f, -110f);
+            rect.sizeDelta = new Vector2(260f, 60f);
+            globalBestText.fontSize = 30;
+        }
+        StyleHudText(globalBestText, TextAlignmentOptions.Top);
 
         if (!startPromptText)
         {
@@ -473,6 +517,105 @@ public class GameManager : MonoBehaviour
     {
         if (!text || !uiFont) return;
         text.font = uiFont;
+    }
+
+    bool HasSupabaseConfig()
+    {
+        return enableGlobalTopScore &&
+               !string.IsNullOrEmpty(supabaseUrl) &&
+               !string.IsNullOrEmpty(supabaseAnonKey);
+    }
+
+    void TrySubmitGlobalBest()
+    {
+        if (!HasSupabaseConfig()) return;
+        int scoreInt = Mathf.FloorToInt(score);
+        if (globalBestLoaded && scoreInt <= globalBestScore) return;
+        StartCoroutine(PostScore(scoreInt, Mathf.FloorToInt(distance)));
+    }
+
+    IEnumerator FetchGlobalBest()
+    {
+        string url = supabaseUrl.TrimEnd('/') +
+                     "/rest/v1/" + supabaseTable +
+                     "?select=score&game_id=eq." + UnityWebRequest.EscapeURL(gameId) +
+                     "&order=score.desc&limit=1";
+
+        UnityWebRequest req = UnityWebRequest.Get(url);
+        req.SetRequestHeader("apikey", supabaseAnonKey);
+        req.SetRequestHeader("Authorization", "Bearer " + supabaseAnonKey);
+        req.SetRequestHeader("Accept", "application/json");
+
+        yield return req.SendWebRequest();
+
+        if (req.result != UnityWebRequest.Result.Success)
+        {
+            Debug.LogWarning("Supabase top score fetch failed: " + req.error);
+            yield break;
+        }
+
+        var rows = ParseScoreRows(req.downloadHandler.text);
+        if (rows != null && rows.Length > 0)
+        {
+            globalBestScore = Mathf.Max(globalBestScore, rows[0].score);
+            globalBestLoaded = true;
+            UpdateUi();
+        }
+    }
+
+    IEnumerator PostScore(int scoreInt, int distanceInt)
+    {
+        string url = supabaseUrl.TrimEnd('/') + "/rest/v1/" + supabaseTable;
+        string body = "{\"game_id\":\"" + EscapeJson(gameId) + "\",\"score\":" + scoreInt + ",\"distance\":" + distanceInt + "}";
+
+        UnityWebRequest req = new UnityWebRequest(url, "POST");
+        req.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(body));
+        req.downloadHandler = new DownloadHandlerBuffer();
+        req.SetRequestHeader("Content-Type", "application/json");
+        req.SetRequestHeader("apikey", supabaseAnonKey);
+        req.SetRequestHeader("Authorization", "Bearer " + supabaseAnonKey);
+        req.SetRequestHeader("Prefer", "return=minimal");
+
+        yield return req.SendWebRequest();
+
+        if (req.result != UnityWebRequest.Result.Success)
+        {
+            Debug.LogWarning("Supabase score insert failed: " + req.error);
+            yield break;
+        }
+
+        if (scoreInt > globalBestScore)
+        {
+            globalBestScore = scoreInt;
+            globalBestLoaded = true;
+            UpdateUi();
+        }
+    }
+
+    [Serializable]
+    class ScoreRow
+    {
+        public int score;
+    }
+
+    [Serializable]
+    class ScoreWrapper
+    {
+        public ScoreRow[] items;
+    }
+
+    static ScoreRow[] ParseScoreRows(string json)
+    {
+        if (string.IsNullOrEmpty(json) || json == "[]") return Array.Empty<ScoreRow>();
+        string wrapped = "{\"items\":" + json + "}";
+        ScoreWrapper wrapper = JsonUtility.FromJson<ScoreWrapper>(wrapped);
+        return wrapper != null ? wrapper.items : Array.Empty<ScoreRow>();
+    }
+
+    static string EscapeJson(string value)
+    {
+        if (string.IsNullOrEmpty(value)) return "";
+        return value.Replace("\\", "\\\\").Replace("\"", "\\\"");
     }
 
     void ApplyRoundedCard(Image img)
