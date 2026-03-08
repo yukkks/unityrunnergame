@@ -1,0 +1,36 @@
+# Unity
+[Ll]ibrary/
+[Tt]emp/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+
+# Builds
+[Bb]uild/
+[Bb]uilds/
+
+# Memory captures
+[Mm]emoryCaptures/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.suo
+*.user
+*.userprefs
+*.csproj
+*.unityproj
+*.sln
+*.pidb
+*.booproj
+*.svd
+*.pdb
+
+# Crash reports
+sysinfo.txt
+
+# Packages
+Packages/packages-lock.json
