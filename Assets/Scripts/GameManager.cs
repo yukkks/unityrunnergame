@@ -8,6 +8,7 @@ using System;
 using System.Text;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
+using Random = UnityEngine.Random;
 
 public class GameManager : MonoBehaviour
 {
@@ -88,6 +89,10 @@ public class GameManager : MonoBehaviour
     public float rimLightIntensity = 0.6f;
     public Vector3 rimLightEuler = new Vector3(18f, 140f, 0f);
 
+    [Header("Shader Fixes")]
+    public bool fixMissingShaders = true;
+    public Color missingShaderFallbackColor = new Color(0.07f, 0.08f, 0.1f, 1f);
+
     [Header("Audio")]
     public AudioController audioController;
 
@@ -97,7 +102,9 @@ public class GameManager : MonoBehaviour
     public float scrollBaseSpeed = 0.35f;
     public float scrollSpeedMultiplier = 0.02f;
     public Vector2 scrollDirection = new Vector2(0f, -1f);
-    public Vector2 scrollTiling = new Vector2(1f, 6f);
+    public Vector2 scrollTiling = new Vector2(1f, 10f);
+    public bool randomizeScrollOffset = true;
+    public Vector2 scrollOffsetRange = new Vector2(0f, 1f);
 
     private float score;
     private float distance;
@@ -117,6 +124,9 @@ public class GameManager : MonoBehaviour
     private Canvas hudCanvas;
     private RectTransform hudSafeArea;
     private Sprite roundedCardSprite;
+    private Material fallbackMaterial;
+    private float shaderFixUntil;
+    private float nextShaderFixTime;
 
     void Awake()
     {
@@ -134,6 +144,10 @@ public class GameManager : MonoBehaviour
         EnsureLighting();
         EnsurePostProcessing();
         ApplyAtmosphere();
+        // Run shader fix for a short window after startup to catch spawned objects.
+        shaderFixUntil = Time.time + 6f;
+        nextShaderFixTime = Time.time;
+        FixMissingShaders();
     }
 
     void Start()
@@ -148,6 +162,12 @@ public class GameManager : MonoBehaviour
 
     void Update()
     {
+        if (fixMissingShaders && Time.time <= shaderFixUntil && Time.time >= nextShaderFixTime)
+        {
+            FixMissingShaders();
+            nextShaderFixTime = Time.time + 0.75f;
+        }
+
         if (State == GameState.Running)
         {
             ElapsedTime += Time.deltaTime;
@@ -220,6 +240,17 @@ public class GameManager : MonoBehaviour
         scrollMaterials = mats.ToArray();
         scrollProps = props.ToArray();
         scrollOffsets = new Vector2[scrollMaterials.Length];
+        if (randomizeScrollOffset)
+        {
+            for (int i = 0; i < scrollOffsets.Length; i++)
+            {
+                scrollOffsets[i] = new Vector2(
+                    Random.Range(scrollOffsetRange.x, scrollOffsetRange.y),
+                    Random.Range(scrollOffsetRange.x, scrollOffsetRange.y)
+                );
+                scrollMaterials[i].SetTextureOffset(scrollProps[i], scrollOffsets[i]);
+            }
+        }
     }
 
     void UpdateEnvironmentMotion()
@@ -652,6 +683,82 @@ public class GameManager : MonoBehaviour
         }
         grain.type.value = FilmGrainLookup.Thin1;
         grain.intensity.value = filmGrainIntensity;
+    }
+
+    void FixMissingShaders()
+    {
+        if (!fixMissingShaders) return;
+
+        Material fallback = GetFallbackMaterial();
+        if (!fallback) return;
+
+        Renderer[] renderers = FindObjectsOfType<Renderer>(true);
+        foreach (Renderer renderer in renderers)
+        {
+            if (!renderer) continue;
+            Material[] shared = renderer.sharedMaterials;
+            bool changed = false;
+            for (int i = 0; i < shared.Length; i++)
+            {
+                Material mat = shared[i];
+                if (IsErrorShader(mat))
+                {
+                    shared[i] = fallback;
+                    changed = true;
+                }
+            }
+            if (changed)
+            {
+                renderer.sharedMaterials = shared;
+            }
+        }
+    }
+
+    bool IsErrorShader(Material mat)
+    {
+        if (!mat) return true;
+        if (!mat.shader) return true;
+        string name = mat.shader.name;
+        if (name == "Hidden/InternalErrorShader") return true;
+        if (name.StartsWith("SyntyStudios/", StringComparison.OrdinalIgnoreCase)) return true;
+        return false;
+    }
+
+    Material GetFallbackMaterial()
+    {
+        if (fallbackMaterial) return fallbackMaterial;
+
+        // Try to find a road material from the POLYGON pack
+        Material[] allMats = Resources.FindObjectsOfTypeAll<Material>();
+        for (int i = 0; i < allMats.Length; i++)
+        {
+            Material mat = allMats[i];
+            if (!mat || !mat.shader) continue;
+            if (mat.name == "Road" || mat.name == "Road 1" || mat.name.Contains("Road"))
+            {
+                if (mat.shader.name != "Hidden/InternalErrorShader")
+                {
+                    fallbackMaterial = mat;
+                    return fallbackMaterial;
+                }
+            }
+        }
+
+        Shader shader = Shader.Find("Universal Render Pipeline/Lit");
+        if (!shader) shader = Shader.Find("Standard");
+        if (!shader) return null;
+
+        fallbackMaterial = new Material(shader);
+        fallbackMaterial.hideFlags = HideFlags.DontSave;
+        if (fallbackMaterial.HasProperty("_BaseColor"))
+        {
+            fallbackMaterial.SetColor("_BaseColor", missingShaderFallbackColor);
+        }
+        if (fallbackMaterial.HasProperty("_Color"))
+        {
+            fallbackMaterial.SetColor("_Color", missingShaderFallbackColor);
+        }
+        return fallbackMaterial;
     }
 
     bool HasSupabaseConfig()

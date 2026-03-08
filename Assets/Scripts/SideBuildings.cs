@@ -7,7 +7,7 @@ public class SideBuildings : MonoBehaviour
 {
     public int countPerSide = 12;
     public float spacing = 6f;
-    public float sideOffset = 3.12f;
+    public float sideOffset = 5.2f;
     public float baseY = 0.1f;
     public float startZ = 0f;
     public float recycleZ = -12f;
@@ -30,12 +30,21 @@ public class SideBuildings : MonoBehaviour
     [Header("Prefabs")]
     public bool usePrefabBuildings = true;
     public GameObject[] buildingPrefabs;
-    public Vector2 prefabScaleRange = new Vector2(0.8f, 1.4f);
+    public Vector2 prefabScaleRange = new Vector2(0.35f, 0.6f);
     public bool alignPrefabToGround = true;
     public float prefabYOffset = 0f;
     public bool randomYaw = false;
     public float leftYaw = 90f;
     public float rightYaw = -90f;
+
+    [Header("Prefab Color Variants")]
+    public bool randomizePrefabColors = true;
+    public Color prefabBaseMin = new Color(0.18f, 0.2f, 0.24f, 1f);
+    public Color prefabBaseMax = new Color(0.55f, 0.6f, 0.7f, 1f);
+    public Color prefabEmissionMin = new Color(0.15f, 0.35f, 0.85f, 1f);
+    public Color prefabEmissionMax = new Color(1f, 0.75f, 0.25f, 1f);
+    public float prefabEmissionScaleMin = 0.7f;
+    public float prefabEmissionScaleMax = 1.5f;
 
     [Header("Shape")]
     [Range(0f, 1f)]
@@ -122,6 +131,10 @@ public class SideBuildings : MonoBehaviour
                 if (alignPrefabToGround)
                 {
                     AlignToGround(instance.transform, baseY + prefabYOffset);
+                }
+                if (randomizePrefabColors)
+                {
+                    ApplyPrefabColorVariants(instance);
                 }
                 return root.transform;
             }
@@ -320,6 +333,54 @@ public class SideBuildings : MonoBehaviour
         target.position += new Vector3(0f, offset, 0f);
     }
 
+    void ApplyPrefabColorVariants(GameObject instance)
+    {
+        if (!instance) return;
+
+        Renderer[] renderers = instance.GetComponentsInChildren<Renderer>();
+        if (renderers == null || renderers.Length == 0) return;
+
+        Color baseColorVar = new Color(
+            Random.Range(prefabBaseMin.r, prefabBaseMax.r),
+            Random.Range(prefabBaseMin.g, prefabBaseMax.g),
+            Random.Range(prefabBaseMin.b, prefabBaseMax.b),
+            1f
+        );
+
+        Color emissionVar = new Color(
+            Random.Range(prefabEmissionMin.r, prefabEmissionMax.r),
+            Random.Range(prefabEmissionMin.g, prefabEmissionMax.g),
+            Random.Range(prefabEmissionMin.b, prefabEmissionMax.b),
+            1f
+        );
+        float emissionScale = Random.Range(prefabEmissionScaleMin, prefabEmissionScaleMax);
+        emissionVar *= emissionScale;
+
+        if (block == null) block = new MaterialPropertyBlock();
+
+        foreach (Renderer renderer in renderers)
+        {
+            if (!renderer) continue;
+            renderer.GetPropertyBlock(block);
+
+            if (renderer.sharedMaterial && renderer.sharedMaterial.HasProperty("_BaseColor"))
+            {
+                block.SetColor("_BaseColor", baseColorVar);
+            }
+            else if (renderer.sharedMaterial && renderer.sharedMaterial.HasProperty("_Color"))
+            {
+                block.SetColor("_Color", baseColorVar);
+            }
+
+            if (renderer.sharedMaterial && renderer.sharedMaterial.HasProperty("_EmissionColor"))
+            {
+                block.SetColor("_EmissionColor", emissionVar);
+            }
+
+            renderer.SetPropertyBlock(block);
+        }
+    }
+
 #if UNITY_EDITOR
     void OnValidate()
     {
@@ -345,17 +406,20 @@ public class SideBuildings : MonoBehaviour
             if (file.Contains("Interior")) continue;
 
             bool allow =
-                file.Contains("Background") ||
-                file.Contains("Large") ||
+                file.Contains("Background_Small") ||
+                file.Contains("Background_Med") ||
+                file.Contains("Background_Medium") ||
+                file.Contains("Large_Part") ||
                 file.Contains("Industrial") ||
                 file.Contains("Advanced") ||
                 file.Contains("Power") ||
-                file.Contains("City_Wall") ||
-                file.Contains("Raised") ||
-                file.Contains("Bank") ||
-                file.Contains("LandingPad") ||
-                file.Contains("StripClub") ||
-                file.Contains("Shack");
+                file.Contains("Raised");
+
+            // Exclude specific oversized/awkward prefabs
+            if (file.Contains("Large_Part_05"))
+            {
+                allow = false;
+            }
 
             if (!allow) continue;
 

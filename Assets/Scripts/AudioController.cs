@@ -8,15 +8,21 @@ public class AudioController : MonoBehaviour
     public AudioClip engineLoopClip;
     public AudioClip laneSwitchClip;
     public AudioClip hitClip;
+    public AudioClip bgmClip;
+    public AudioClip coinClip;
 
     [Header("Levels")]
     [Range(0f, 1f)]
     public float engineVolume = 0.45f;
     [Range(0f, 1f)]
     public float sfxVolume = 0.8f;
+    [Range(0f, 1f)]
+    public float bgmVolume = 0.35f;
+    public bool playBgmOnAwake = true;
 
     private AudioSource engineSource;
     private AudioSource sfxSource;
+    private AudioSource bgmSource;
 
     void Awake()
     {
@@ -31,6 +37,19 @@ public class AudioController : MonoBehaviour
 
     void SetupSources()
     {
+        if (!bgmClip)
+        {
+            bgmClip = Resources.Load<AudioClip>("Audio/SpaceBeat2");
+        }
+        if (!coinClip)
+        {
+            coinClip = Resources.Load<AudioClip>("Audio/Coin");
+        }
+        if (!hitClip)
+        {
+            hitClip = Resources.Load<AudioClip>("Audio/Hit");
+        }
+
         engineSource = gameObject.AddComponent<AudioSource>();
         engineSource.loop = true;
         engineSource.playOnAwake = false;
@@ -40,6 +59,17 @@ public class AudioController : MonoBehaviour
         sfxSource = gameObject.AddComponent<AudioSource>();
         sfxSource.playOnAwake = false;
         sfxSource.volume = sfxVolume;
+
+        bgmSource = gameObject.AddComponent<AudioSource>();
+        bgmSource.loop = true;
+        bgmSource.playOnAwake = false;
+        bgmSource.volume = bgmVolume;
+        bgmSource.clip = bgmClip;
+
+        if (playBgmOnAwake && bgmClip)
+        {
+            bgmSource.Play();
+        }
     }
 
     public void SetRunning(bool running)
@@ -70,6 +100,27 @@ public class AudioController : MonoBehaviour
         if (hitClip && sfxSource)
         {
             sfxSource.PlayOneShot(hitClip, sfxVolume);
+        }
+    }
+
+    public void PlayCoin()
+    {
+        if (coinClip && sfxSource)
+        {
+            sfxSource.PlayOneShot(coinClip, sfxVolume * 0.7f);
+        }
+    }
+
+    public void SetBgmEnabled(bool enabled)
+    {
+        if (!bgmSource) return;
+        if (enabled)
+        {
+            if (!bgmSource.isPlaying) bgmSource.Play();
+        }
+        else
+        {
+            if (bgmSource.isPlaying) bgmSource.Pause();
         }
     }
 }

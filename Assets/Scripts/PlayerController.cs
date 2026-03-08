@@ -13,8 +13,10 @@ public class PlayerController : MonoBehaviour
     public float thrusterRate = 30f;
     public Vector3 thrusterLocalOffset = new Vector3(0f, 0.2f, -0.4f);
     public ParticleSystem crashFxPrefab;
+    public Material thrusterMaterial;
 
     private ParticleSystem.EmissionModule thrusterEmission;
+    private Material runtimeThrusterMaterial;
 
     void Update()
     {
@@ -82,6 +84,7 @@ public class PlayerController : MonoBehaviour
         if (thruster)
         {
             thrusterEmission = thruster.emission;
+            ApplyThrusterMaterial(thruster);
             return;
         }
 
@@ -111,6 +114,56 @@ public class PlayerController : MonoBehaviour
 
         var renderer = thruster.GetComponent<ParticleSystemRenderer>();
         renderer.renderMode = ParticleSystemRenderMode.Billboard;
+        ApplyThrusterMaterial(thruster);
+    }
+
+    void ApplyThrusterMaterial(ParticleSystem ps)
+    {
+        if (!ps) return;
+
+        ParticleSystemRenderer renderer = ps.GetComponent<ParticleSystemRenderer>();
+        if (!renderer) return;
+
+        if (thrusterMaterial)
+        {
+            renderer.material = thrusterMaterial;
+            return;
+        }
+
+        if (!runtimeThrusterMaterial)
+        {
+            Shader shader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
+            if (!shader) shader = Shader.Find("Universal Render Pipeline/Unlit");
+            if (!shader) shader = Shader.Find("Standard");
+            runtimeThrusterMaterial = new Material(shader);
+            runtimeThrusterMaterial.hideFlags = HideFlags.DontSave;
+
+            if (runtimeThrusterMaterial.HasProperty("_BaseMap"))
+            {
+                runtimeThrusterMaterial.SetTexture("_BaseMap", null);
+            }
+            if (runtimeThrusterMaterial.HasProperty("_MainTex"))
+            {
+                runtimeThrusterMaterial.SetTexture("_MainTex", null);
+            }
+
+            Color white = Color.white;
+            if (runtimeThrusterMaterial.HasProperty("_BaseColor"))
+            {
+                runtimeThrusterMaterial.SetColor("_BaseColor", white);
+            }
+            if (runtimeThrusterMaterial.HasProperty("_Color"))
+            {
+                runtimeThrusterMaterial.SetColor("_Color", white);
+            }
+            if (runtimeThrusterMaterial.HasProperty("_EmissionColor"))
+            {
+                runtimeThrusterMaterial.EnableKeyword("_EMISSION");
+                runtimeThrusterMaterial.SetColor("_EmissionColor", white);
+            }
+        }
+
+        renderer.material = runtimeThrusterMaterial;
     }
 
     void SpawnCrashFx()

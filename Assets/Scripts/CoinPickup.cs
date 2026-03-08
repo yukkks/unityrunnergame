@@ -63,6 +63,10 @@ public class CoinPickup : MonoBehaviour
         {
             GameManager.Instance.AddScore(points);
         }
+        if (AudioController.Instance)
+        {
+            AudioController.Instance.PlayCoin();
+        }
 
         Collider col = GetComponent<Collider>();
         if (col) col.enabled = false;

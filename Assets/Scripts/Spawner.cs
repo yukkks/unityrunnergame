@@ -11,8 +11,8 @@ public class Spawner : MonoBehaviour
     public float coinZ = 12f;
 
     [Header("Spawn Rate")]
-    public float startMinInterval = 0.9f;
-    public float startMaxInterval = 1.4f;
+    public float startMinInterval = 0.8f;
+    public float startMaxInterval = 1.25f;
     public float endMinInterval = 0.35f;
     public float endMaxInterval = 0.7f;
     public float rampDuration = 60f; // seconds to reach hardest
