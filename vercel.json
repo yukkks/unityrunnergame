@@ -1,38 +1,38 @@
 {
   "headers": [
-    { "source": "/(.*)\.data\.br", "headers": [
+    { "source": "/(.*)\\.data\\.br", "headers": [
       { "key": "Content-Encoding", "value": "br" },
       { "key": "Content-Type", "value": "application/octet-stream" }
     ]},
-    { "source": "/(.*)\.wasm\.br", "headers": [
+    { "source": "/(.*)\\.wasm\\.br", "headers": [
       { "key": "Content-Encoding", "value": "br" },
       { "key": "Content-Type", "value": "application/wasm" }
     ]},
-    { "source": "/(.*)\.js\.br", "headers": [
+    { "source": "/(.*)\\.js\\.br", "headers": [
       { "key": "Content-Encoding", "value": "br" },
       { "key": "Content-Type", "value": "application/javascript" }
     ]},
-    { "source": "/(.*)\.data\.gz", "headers": [
+    { "source": "/(.*)\\.data\\.gz", "headers": [
       { "key": "Content-Encoding", "value": "gzip" },
       { "key": "Content-Type", "value": "application/octet-stream" }
     ]},
-    { "source": "/(.*)\.wasm\.gz", "headers": [
+    { "source": "/(.*)\\.wasm\\.gz", "headers": [
       { "key": "Content-Encoding", "value": "gzip" },
       { "key": "Content-Type", "value": "application/wasm" }
     ]},
-    { "source": "/(.*)\.js\.gz", "headers": [
+    { "source": "/(.*)\\.js\\.gz", "headers": [
       { "key": "Content-Encoding", "value": "gzip" },
       { "key": "Content-Type", "value": "application/javascript" }
     ]},
-    { "source": "/(.*)\.data\.unityweb", "headers": [
+    { "source": "/(.*)\\.data\\.unityweb", "headers": [
       { "key": "Content-Encoding", "value": "gzip" },
       { "key": "Content-Type", "value": "application/octet-stream" }
     ]},
-    { "source": "/(.*)\.wasm\.unityweb", "headers": [
+    { "source": "/(.*)\\.wasm\\.unityweb", "headers": [
       { "key": "Content-Encoding", "value": "gzip" },
       { "key": "Content-Type", "value": "application/wasm" }
     ]},
-    { "source": "/(.*)\.js\.unityweb", "headers": [
+    { "source": "/(.*)\\.js\\.unityweb", "headers": [
       { "key": "Content-Encoding", "value": "gzip" },
       { "key": "Content-Type", "value": "application/javascript" }
     ]}
