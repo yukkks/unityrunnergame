@@ -163,9 +163,9 @@ MonoBehaviour:
   usePatterns: 1
   coinSpawnChance: 1
   coinStreaks: 1
-  coinStreakLength: {x: 3, y: 6}
-  coinStreakChance: 0.35
-  bonusLaneChance: 0.08
+  coinStreakLength: {x: 4, y: 8}
+  coinStreakChance: 0.55
+  bonusLaneChance: 0.18
 --- !u!4 &31877909
 Transform:
   m_ObjectHideFlags: 0

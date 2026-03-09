@@ -5,6 +5,8 @@ public class Spawner : MonoBehaviour
     public GameObject obstaclePrefab;
     public GameObject coinPrefab;
     public float laneOffset = 1.2f;
+    [Range(2, 5)]
+    public int laneCount = 3;
     public float spawnY = 0.5f;
     public float spawnZ = 12f;
     public float coinY = 0.9f;
@@ -39,17 +41,37 @@ public class Spawner : MonoBehaviour
 
     void Start()
     {
-        patternBank = new int[][]
+        int lc = Mathf.Max(2, laneCount);
+        if (lc == 3)
         {
-            new int[] { 0, 1 },
-            new int[] { 1, 0 },
-            new int[] { 0, 0, 1 },
-            new int[] { 1, 1, 0 },
-            new int[] { 0, 1, 1 },
-            new int[] { 1, 0, 0 },
-            new int[] { 0, 1, 0, 1 },
-            new int[] { 1, 0, 1, 0 }
-        };
+            patternBank = new int[][]
+            {
+                new int[] { 0, 1, 2 },
+                new int[] { 2, 1, 0 },
+                new int[] { 0, 2, 1 },
+                new int[] { 2, 0, 1 },
+                new int[] { 1, 0, 2 },
+                new int[] { 1, 2, 0 },
+                new int[] { 0, 1, 0, 2 },
+                new int[] { 2, 1, 2, 0 },
+                new int[] { 1, 0, 1, 2 },
+                new int[] { 1, 2, 1, 0 }
+            };
+        }
+        else
+        {
+            patternBank = new int[][]
+            {
+                new int[] { 0, 1 },
+                new int[] { 1, 0 },
+                new int[] { 0, 0, 1 },
+                new int[] { 1, 1, 0 },
+                new int[] { 0, 1, 1 },
+                new int[] { 1, 0, 0 },
+                new int[] { 0, 1, 0, 1 },
+                new int[] { 1, 0, 1, 0 }
+            };
+        }
         Schedule();
     }
 
@@ -85,7 +107,7 @@ public class Spawner : MonoBehaviour
         UpdateBonusLane();
 
         int obstacleLane = GetNextLane();
-        float x = (obstacleLane == 0) ? -laneOffset : laneOffset;
+        float x = LaneToX(obstacleLane);
         Vector3 pos = new Vector3(x, spawnY, spawnZ);
 
         Instantiate(obstaclePrefab, pos, Quaternion.identity);
@@ -93,7 +115,7 @@ public class Spawner : MonoBehaviour
         if (ShouldSpawnCoin(obstacleLane))
         {
             int coinLane = GetCoinLane(obstacleLane);
-            float coinX = (coinLane == 0) ? -laneOffset : laneOffset;
+            float coinX = LaneToX(coinLane);
             Vector3 coinPos = new Vector3(coinX, coinY, coinZ);
             SpawnCoin(coinPos);
         }
@@ -103,7 +125,7 @@ public class Spawner : MonoBehaviour
     {
         if (!usePatterns || patternBank == null || patternBank.Length == 0)
         {
-            return Random.Range(0, 2);
+            return Random.Range(0, Mathf.Max(2, laneCount));
         }
 
         if (currentPattern == null || patternIndex >= currentPattern.Length)
@@ -139,7 +161,7 @@ public class Spawner : MonoBehaviour
             if (Random.value < coinStreakChance)
             {
                 coinStreakRemaining = Random.Range(coinStreakLength.x, coinStreakLength.y + 1);
-                coinStreakLane = Random.Range(0, 2);
+                coinStreakLane = Random.Range(0, Mathf.Max(2, laneCount));
                 coinStreakRemaining -= 1;
                 lane = coinStreakLane;
             }
@@ -147,12 +169,12 @@ public class Spawner : MonoBehaviour
 
         if (lane < 0)
         {
-            lane = 1 - obstacleLane;
+            lane = RandomLaneExcluding(obstacleLane);
         }
 
         if (lane == obstacleLane)
         {
-            lane = 1 - obstacleLane;
+            lane = RandomLaneExcluding(obstacleLane);
             if (coinStreakRemaining > 0 && coinStreakLane == obstacleLane)
             {
                 coinStreakLane = lane;
@@ -175,9 +197,24 @@ public class Spawner : MonoBehaviour
 
         if (Random.value < bonusLaneChance)
         {
-            bonusLane = Random.Range(0, 2);
+            bonusLane = Random.Range(0, Mathf.Max(2, laneCount));
             bonusLaneUntil = Time.time + Random.Range(2f, 4f);
         }
+    }
+
+    float LaneToX(int laneIndex)
+    {
+        float centerIndex = (Mathf.Max(2, laneCount) - 1) * 0.5f;
+        return (laneIndex - centerIndex) * laneOffset;
+    }
+
+    int RandomLaneExcluding(int exclude)
+    {
+        int lc = Mathf.Max(2, laneCount);
+        if (lc <= 1) return 0;
+        int lane = Random.Range(0, lc - 1);
+        if (lane >= exclude) lane += 1;
+        return lane;
     }
 
     void SpawnCoin(Vector3 pos)

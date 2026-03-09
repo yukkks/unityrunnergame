@@ -10,7 +10,7 @@ public class SplashTipsCycler : MonoBehaviour
     [Tooltip("Tips shown in order. Edit in Inspector.")]
     public List<string> tips = new List<string>
     {
-        "Tap to switch lanes and dodge bombs.",
+        "Tap left/right to change lanes and dodge bombs.",
         "Collect coins to boost your score.",
         "Stay centered when obstacles cluster."
     };

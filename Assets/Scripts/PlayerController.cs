@@ -4,7 +4,10 @@ public class PlayerController : MonoBehaviour
 {
     public float laneOffset = 1.2f;
     public float laneLerp = 10f;
-    private int lane = 0;
+    [Range(2, 5)]
+    public int laneCount = 3;
+    public int startLane = 1;
+    private int lane = 1;
     public CameraFollow cameraFollow;
 
     [Header("VFX")]
@@ -33,14 +36,29 @@ public class PlayerController : MonoBehaviour
         }
 
         int prevLane = lane;
-        if (Input.GetMouseButtonDown(0) ||
-            (Input.touchCount > 0 && Input.GetTouch(0).phase == TouchPhase.Began))
+        int laneDelta = 0;
+
+        if (Input.GetKeyDown(KeyCode.LeftArrow) || Input.GetKeyDown(KeyCode.A))
         {
-            lane = 1 - lane;
+            laneDelta = -1;
         }
-        if (Input.GetKeyDown(KeyCode.LeftArrow) || Input.GetKeyDown(KeyCode.RightArrow))
+        else if (Input.GetKeyDown(KeyCode.RightArrow) || Input.GetKeyDown(KeyCode.D))
         {
-            lane = 1 - lane;
+            laneDelta = 1;
+        }
+        else if (Input.GetMouseButtonDown(0))
+        {
+            laneDelta = (Input.mousePosition.x < Screen.width * 0.5f) ? -1 : 1;
+        }
+        else if (Input.touchCount > 0 && Input.GetTouch(0).phase == TouchPhase.Began)
+        {
+            laneDelta = (Input.GetTouch(0).position.x < Screen.width * 0.5f) ? -1 : 1;
+        }
+
+        if (laneDelta != 0)
+        {
+            int maxLane = Mathf.Max(0, laneCount - 1);
+            lane = Mathf.Clamp(lane + laneDelta, 0, maxLane);
         }
 
         if (lane != prevLane && cameraFollow)
@@ -52,7 +70,8 @@ public class PlayerController : MonoBehaviour
             AudioController.Instance.PlayLaneSwitch();
         }
 
-        float targetX = (lane == 0) ? -laneOffset : laneOffset;
+        float centerIndex = (laneCount - 1) * 0.5f;
+        float targetX = (lane - centerIndex) * laneOffset;
         Vector3 pos = transform.position;
         pos.x = Mathf.Lerp(pos.x, targetX, Time.deltaTime * laneLerp);
         transform.position = pos;
@@ -76,6 +95,8 @@ public class PlayerController : MonoBehaviour
 
     void Start()
     {
+        int maxLane = Mathf.Max(0, laneCount - 1);
+        lane = Mathf.Clamp(startLane, 0, maxLane);
         EnsureThruster();
     }
 

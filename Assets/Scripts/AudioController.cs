@@ -39,7 +39,11 @@ public class AudioController : MonoBehaviour
     {
         if (!bgmClip)
         {
-            bgmClip = Resources.Load<AudioClip>("Audio/SpaceBeat2");
+            bgmClip = Resources.Load<AudioClip>("Audio/SpaceBeat");
+            if (!bgmClip)
+            {
+                bgmClip = Resources.Load<AudioClip>("Audio/SpaceBeat2");
+            }
         }
         if (!coinClip)
         {

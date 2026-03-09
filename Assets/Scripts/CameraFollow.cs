@@ -5,6 +5,9 @@ public class CameraFollow : MonoBehaviour
     public Transform target;
     public Vector3 offset = new Vector3(0f, 4f, -6.5f);
     public float smooth = 8f;
+    public float laneOffset = 1.2f;
+    [Range(2, 5)]
+    public int laneCount = 3;
 
     [Header("Tilt")]
     public float tiltAmount = 6f;
@@ -37,7 +40,9 @@ public class CameraFollow : MonoBehaviour
         transform.position = Vector3.Lerp(transform.position, desired, smooth * Time.deltaTime);
 
         // tilt based on player x
-        float t = Mathf.Clamp(target.position.x / 1.5f, -1f, 1f);
+        float laneMaxX = laneOffset * (Mathf.Max(2, laneCount) - 1) * 0.5f;
+        float denom = Mathf.Max(0.01f, laneMaxX);
+        float t = Mathf.Clamp(target.position.x / denom, -1f, 1f);
         float targetTilt = -t * tiltAmount + rollImpulse;
         currentTilt = Mathf.Lerp(currentTilt, targetTilt, tiltSmooth * Time.deltaTime);
 
