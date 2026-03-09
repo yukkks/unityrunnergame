@@ -18,27 +18,25 @@
     <div id="unity-container" class="unity-desktop">
       <canvas id="unity-canvas" width={{{ WIDTH }}} height={{{ HEIGHT }}} tabindex="-1"></canvas>
       <div id="unity-loading-bar">
-        <div class="loader-shell">
-          <div class="loader-brand">
-            <div class="loader-logo">
-              <div class="ring"></div>
-              <div class="ring alt"></div>
-              <div class="core"><span>SR</span></div>
-            </div>
-            <div>
-              <div class="loader-title">{{{ PRODUCT_NAME }}}</div>
-              <div class="loader-subtitle">Hyperlane boot sequence</div>
-            </div>
+        <div class="loader-hud">
+          <div class="hud-title">LOADING...</div>
+          <div class="hud-ring">
+            <div class="ring-outer"></div>
+            <div class="ring-mid"></div>
+            <div class="ring-inner"></div>
+            <div id="hud-progress"></div>
+            <div class="ring-core">SR</div>
+            <div class="ring-ticks"></div>
           </div>
-          <div class="progress-wrap">
+          <div class="hud-progress-wrap">
             <div id="unity-progress-bar-empty">
               <div id="unity-progress-bar-full"></div>
             </div>
-            <div class="progress-meta">
+            <div class="hud-progress-meta">
               <span id="loader-percent">0%</span>
-              <span id="loader-tip"></span>
             </div>
           </div>
+          <div id="loader-tip" class="hud-tip"></div>
         </div>
       </div>
       <div id="unity-warning"> </div>
@@ -135,7 +133,7 @@
         tipIndex += 1;
       }
       cycleTip();
-      setInterval(cycleTip, 3500);
+      setInterval(cycleTip, 3000);
 
       loadingBar.style.display = "flex";
 
@@ -146,6 +144,8 @@
           var percent = Math.round(progress * 100);
           progressBarFull.style.width = percent + "%";
           if (progressPercent) progressPercent.textContent = percent + "%";
+          var ring = document.querySelector("#hud-progress");
+          if (ring) ring.style.setProperty("--progress", (percent * 3.6) + "deg");
         }).then((unityInstance) => {
           loadingBar.style.display = "none";
 #if SHOW_DIAGNOSTICS
