@@ -40,6 +40,43 @@ public class GameManager : MonoBehaviour
     public TMP_Text gameOverHintText;
     public TMP_FontAsset uiFont;
 
+    [Header("Farewell Goal")]
+    [Tooltip("Seconds until mom's flight boards.")]
+    public float timeLimit = 60f;
+    [Tooltip("Reach this weight (kg) to keep the dog grounded — over the airline limit. Real airlines cap hold dogs around 32–45kg (American/Air Canada = 100lb/45kg); ~75kg is the upper ceiling.")]
+    public float winWeightKg = 75f;
+    [Tooltip("Weight the progress bar treats as empty (visual baseline below the start weight).")]
+    public float barFloorKg = 30f;
+    [Tooltip("Left empty = auto-found on the Player at start.")]
+    public DogWeightVisual dogWeight;
+    public TMP_Text timerText;
+    public TMP_Text weightText;
+    [Tooltip("Hide the arcade SCORE/DIST/BEST/TOP HUD — off-theme for the farewell goal.")]
+    public bool showScoreHud = false;
+
+    [Header("UI Palette (warm & handmade)")]
+    [Tooltip("Main text color — warm cream.")]
+    public Color uiTextColor = new Color(0.96f, 0.93f, 0.85f, 1f);
+    [Tooltip("Accent (timer, weight, highlights) — amber.")]
+    public Color uiAccentColor = new Color(0.98f, 0.70f, 0.27f, 1f);
+    [Tooltip("Urgency color when the clock is low — warm red.")]
+    public Color uiUrgentColor = new Color(0.95f, 0.36f, 0.30f, 1f);
+    [Tooltip("Soft drop-shadow color behind text — warm brown.")]
+    public Color uiShadowColor = new Color(0.16f, 0.09f, 0.05f, 0.75f);
+    [Tooltip("Weight bar track (empty) color — warm dark.")]
+    public Color uiBarTrackColor = new Color(0.20f, 0.14f, 0.10f, 0.85f);
+    [Tooltip("Weight bar fill at low fill — soft green.")]
+    public Color uiBarLowColor = new Color(0.55f, 0.78f, 0.42f, 1f);
+    [Tooltip("Weight bar fill at full — warm gold.")]
+    public Color uiBarFullColor = new Color(1f, 0.83f, 0.32f, 1f);
+
+    [Header("Farewell Text")]
+    [TextArea] public string startPrompt = "TAP TO START\nDon't let mom catch her flight!";
+    [TextArea] public string winTitle = "SHE'S STAYING";
+    [TextArea] public string winMessage = "Too chubby to fly.\nMom isn't going anywhere.";
+    [TextArea] public string loseTitle = "THE FLIGHT LEFT";
+    [TextArea] public string loseMessage = "Not heavy enough in time…\nOne more walk?";
+
     [Header("Game Over UI")]
     public int gameOverFontSize = 44;
     [Range(8, 64)]
@@ -115,6 +152,9 @@ public class GameManager : MonoBehaviour
     private int bestScore;
     private int globalBestScore;
     private bool globalBestLoaded;
+    private float timeRemaining;
+    private bool won;
+    private TMP_Text gameOverTitleText;
     private const string BestScoreKey = "BestScore";
 
     private Material[] scrollMaterials;
@@ -124,6 +164,19 @@ public class GameManager : MonoBehaviour
     private Canvas hudCanvas;
     private RectTransform hudSafeArea;
     private Sprite roundedCardSprite;
+    private Image weightBarFill;
+    private Image weightBarBg;
+    private RectTransform weightBarRoot;
+    private Sprite barPillSprite;
+    private Image timerPill;
+    private RectTransform timerPillRoot;
+    private Image gameOverAccent;
+    private CanvasGroup gameOverGroup;
+    private RectTransform gameOverCardRect;
+    private float barFillDisplay;
+    private float weightPunch;
+    private float lastPunchWeight;
+    private bool punchInit;
     private Material fallbackMaterial;
     private float shaderFixUntil;
     private float nextShaderFixTime;
@@ -179,6 +232,20 @@ public class GameManager : MonoBehaviour
             UpdateUi();
 
             UpdateEnvironmentMotion();
+
+            timeRemaining -= Time.deltaTime;
+            UpdateGoalUi();
+
+            float weight = dogWeight ? dogWeight.currentWeight : 0f;
+            if (weight >= winWeightKg)
+            {
+                EndGame(true);
+            }
+            else if (timeRemaining <= 0f)
+            {
+                timeRemaining = 0f;
+                EndGame(false);
+            }
         }
         else if (State == GameState.Waiting)
         {
@@ -293,16 +360,30 @@ public class GameManager : MonoBehaviour
         mat.SetTexture(prop, tex);
     }
 
+    // Kept for compatibility — a plain "game over" is a loss.
     public void GameOver()
     {
+        EndGame(false);
+    }
+
+    public void EndGame(bool victory)
+    {
         if (State != GameState.Running) return;
+        won = victory;
         CommitBestScore();
         TrySubmitGlobalBest();
         UpdateUi();
         UpdateGameOverUi();
         SetState(GameState.GameOver);
-        if (audioController) audioController.PlayHit();
-        Debug.Log("Game Over");
+        if (gameOverPanel && gameOverPanel.activeInHierarchy)
+        {
+            StartCoroutine(AnimateGameOverIn());
+        }
+        if (audioController)
+        {
+            if (victory) audioController.PlayCoin();
+            else audioController.PlayHit();
+        }
     }
 
     void CommitBestScore()
@@ -328,6 +409,47 @@ public class GameManager : MonoBehaviour
         if (globalBestText)
         {
             globalBestText.text = globalBestLoaded ? "TOP " + globalBestScore.ToString() : "TOP --";
+        }
+    }
+
+    void UpdateGoalUi()
+    {
+        bool urgent = timeRemaining <= 10f && timeRemaining > 0f;
+        if (timerText)
+        {
+            int secs = Mathf.CeilToInt(Mathf.Max(0f, timeRemaining));
+            timerText.text = secs + "s";
+            timerText.color = (timeRemaining <= 10f) ? uiUrgentColor : uiTextColor;
+        }
+        float pulse = urgent ? (1f + 0.06f * Mathf.Sin(Time.unscaledTime * 12f)) : 1f;
+        if (timerText) timerText.rectTransform.localScale = Vector3.one * pulse;
+        if (timerPillRoot) timerPillRoot.localScale = Vector3.one * pulse;
+        if (timerPill)
+        {
+            timerPill.color = urgent
+                ? Color.Lerp(uiBarTrackColor, new Color(0.42f, 0.12f, 0.10f, 0.92f), 0.7f)
+                : uiBarTrackColor;
+        }
+        float cur = dogWeight ? dogWeight.currentWeight : barFloorKg;
+
+        // Punch the weight number whenever a treat is eaten (weight ticks up).
+        if (!punchInit) { lastPunchWeight = cur; punchInit = true; }
+        if (cur > lastPunchWeight + 0.01f) weightPunch = 1f;
+        lastPunchWeight = cur;
+        weightPunch = Mathf.MoveTowards(weightPunch, 0f, Time.deltaTime * 3.5f);
+
+        if (weightText)
+        {
+            weightText.text = Mathf.RoundToInt(cur) + " / " + Mathf.RoundToInt(winWeightKg) + " kg";
+            weightText.color = uiAccentColor;
+            weightText.rectTransform.localScale = Vector3.one * (1f + 0.22f * weightPunch);
+        }
+        if (weightBarFill)
+        {
+            float targetT = Mathf.Clamp01(Mathf.InverseLerp(barFloorKg, winWeightKg, cur));
+            barFillDisplay = Mathf.Lerp(barFillDisplay, targetT, Time.deltaTime * 6f);
+            weightBarFill.fillAmount = barFillDisplay;
+            weightBarFill.color = Color.Lerp(uiBarLowColor, uiBarFullColor, barFillDisplay);
         }
     }
 
@@ -392,6 +514,21 @@ public class GameManager : MonoBehaviour
         }
         StyleHudText(globalBestText, TextAlignmentOptions.Top);
 
+        if (!timerText)
+        {
+            timerText = CreateUiText(hudParent, "TimerText", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -40f), new Vector2(400f, 90f), 64, TextAlignmentOptions.Center);
+        }
+        StyleHudText(timerText, TextAlignmentOptions.Center);
+        EnsureTimerPill();
+
+        if (!weightText)
+        {
+            weightText = CreateUiText(hudParent, "WeightText", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -140f), new Vector2(540f, 42f), 30, TextAlignmentOptions.Top);
+        }
+        StyleHudText(weightText, TextAlignmentOptions.Top);
+
+        EnsureWeightBar(hudParent);
+
         if (!startPromptText)
         {
             startPromptText = CreateUiText(hudParent, "StartPrompt", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 180f), new Vector2(820f, 150f), 78, TextAlignmentOptions.Center);
@@ -412,7 +549,16 @@ public class GameManager : MonoBehaviour
             startPromptText.fontSize = 78;
             startPromptText.text = "TAP TO START";
         }
+        if (startPromptText) startPromptText.text = startPrompt;
         StyleHudText(startPromptText, TextAlignmentOptions.Center);
+
+        if (!showScoreHud)
+        {
+            if (scoreText) scoreText.gameObject.SetActive(false);
+            if (bestScoreText) bestScoreText.gameObject.SetActive(false);
+            if (distanceText) distanceText.gameObject.SetActive(false);
+            if (globalBestText) globalBestText.gameObject.SetActive(false);
+        }
 
         EnsureGameOverUi(hudCanvas.transform);
     }
@@ -577,11 +723,26 @@ public class GameManager : MonoBehaviour
         text.alignment = alignment;
         text.enableWordWrapping = false;
         text.fontStyle = FontStyles.Normal;
-        text.color = Color.white;
-        text.outlineWidth = 0.2f;
-        text.outlineColor = new Color(0f, 0f, 0f, 0.8f);
+        text.color = uiTextColor;
+        text.outlineWidth = 0f;
         text.raycastTarget = false;
         ApplyFont(text);
+        ApplySoftShadow(text);
+    }
+
+    // Warm soft drop shadow via the TMP underlay feature (replaces the old
+    // hard black outline). Font-agnostic — works with whatever uiFont is set.
+    void ApplySoftShadow(TMP_Text text)
+    {
+        if (!text) return;
+        Material mat = text.fontMaterial; // instanced copy, per-text
+        if (!mat) return;
+        mat.EnableKeyword(ShaderUtilities.Keyword_Underlay);
+        mat.SetColor(ShaderUtilities.ID_UnderlayColor, uiShadowColor);
+        mat.SetFloat(ShaderUtilities.ID_UnderlayOffsetX, 0.5f);
+        mat.SetFloat(ShaderUtilities.ID_UnderlayOffsetY, -0.6f);
+        mat.SetFloat(ShaderUtilities.ID_UnderlayDilate, 0.1f);
+        mat.SetFloat(ShaderUtilities.ID_UnderlaySoftness, 0.3f);
     }
 
     void ApplyFont(TMP_Text text)
@@ -860,6 +1021,72 @@ public class GameManager : MonoBehaviour
         return value.Replace("\\", "\\\\").Replace("\"", "\\\"");
     }
 
+    void EnsureTimerPill()
+    {
+        if (timerPill || !timerText) return;
+        if (!barPillSprite) barPillSprite = CreateRoundedSprite(64, 32, 16);
+
+        GameObject pill = new GameObject("TimerPill", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        pill.transform.SetParent(timerText.transform.parent, false);
+        timerPillRoot = pill.GetComponent<RectTransform>();
+        timerPillRoot.anchorMin = new Vector2(0.5f, 1f);
+        timerPillRoot.anchorMax = new Vector2(0.5f, 1f);
+        timerPillRoot.pivot = new Vector2(0.5f, 1f);
+        timerPillRoot.anchoredPosition = new Vector2(0f, -37f);
+        timerPillRoot.sizeDelta = new Vector2(200f, 96f);
+
+        timerPill = pill.GetComponent<Image>();
+        timerPill.raycastTarget = false;
+        timerPill.color = uiBarTrackColor;
+        if (barPillSprite) { timerPill.sprite = barPillSprite; timerPill.type = Image.Type.Sliced; }
+
+        // Render behind the timer text.
+        timerPillRoot.SetSiblingIndex(timerText.transform.GetSiblingIndex());
+    }
+
+    void EnsureWeightBar(RectTransform parent)
+    {
+        if (weightBarFill) return;
+        if (!barPillSprite) barPillSprite = CreateRoundedSprite(64, 32, 16);
+
+        GameObject root = new GameObject("WeightBar", typeof(RectTransform));
+        root.transform.SetParent(parent, false);
+        weightBarRoot = root.GetComponent<RectTransform>();
+        weightBarRoot.anchorMin = new Vector2(0.5f, 1f);
+        weightBarRoot.anchorMax = new Vector2(0.5f, 1f);
+        weightBarRoot.pivot = new Vector2(0.5f, 1f);
+        weightBarRoot.anchoredPosition = new Vector2(0f, -184f);
+        weightBarRoot.sizeDelta = new Vector2(540f, 26f);
+
+        GameObject track = new GameObject("Track", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        track.transform.SetParent(root.transform, false);
+        RectTransform trackRt = track.GetComponent<RectTransform>();
+        trackRt.anchorMin = Vector2.zero;
+        trackRt.anchorMax = Vector2.one;
+        trackRt.offsetMin = Vector2.zero;
+        trackRt.offsetMax = Vector2.zero;
+        weightBarBg = track.GetComponent<Image>();
+        weightBarBg.raycastTarget = false;
+        weightBarBg.color = uiBarTrackColor;
+        if (barPillSprite) { weightBarBg.sprite = barPillSprite; weightBarBg.type = Image.Type.Sliced; }
+
+        GameObject fill = new GameObject("Fill", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        fill.transform.SetParent(root.transform, false);
+        RectTransform fillRt = fill.GetComponent<RectTransform>();
+        fillRt.anchorMin = Vector2.zero;
+        fillRt.anchorMax = Vector2.one;
+        fillRt.offsetMin = new Vector2(3f, 3f);
+        fillRt.offsetMax = new Vector2(-3f, -3f);
+        weightBarFill = fill.GetComponent<Image>();
+        weightBarFill.raycastTarget = false;
+        weightBarFill.color = uiAccentColor;
+        if (barPillSprite) weightBarFill.sprite = barPillSprite;
+        weightBarFill.type = Image.Type.Filled;
+        weightBarFill.fillMethod = Image.FillMethod.Horizontal;
+        weightBarFill.fillOrigin = (int)Image.OriginHorizontal.Left;
+        weightBarFill.fillAmount = 0f;
+    }
+
     void ApplyRoundedCard(Image img)
     {
         if (!img) return;
@@ -931,7 +1158,8 @@ public class GameManager : MonoBehaviour
         rect.offsetMax = Vector2.zero;
 
         Image img = panel.GetComponent<Image>();
-        img.color = new Color(0f, 0f, 0f, 0.6f);
+        img.color = new Color(0.05f, 0.03f, 0.02f, 0.80f);
+        gameOverGroup = panel.AddComponent<CanvasGroup>();
 
         GameObject card = new GameObject("GameOverCard", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
         card.layer = canvas.gameObject.layer;
@@ -943,21 +1171,36 @@ public class GameManager : MonoBehaviour
         cardRect.pivot = new Vector2(0.5f, 0.5f);
         cardRect.anchoredPosition = Vector2.zero;
         cardRect.sizeDelta = new Vector2(700f, 360f);
+        gameOverCardRect = cardRect;
 
         Image cardImg = card.GetComponent<Image>();
-        cardImg.color = new Color(0f, 0f, 0f, 0.75f);
+        cardImg.color = new Color(0.15f, 0.10f, 0.07f, 0.98f);
 
-        TMP_Text title = CreateUiText(card.transform, "GameOverTitle", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 120f), new Vector2(600f, 80f), gameOverFontSize, TextAlignmentOptions.Center);
-        title.text = "GAME OVER";
-        ApplyFont(title);
+        gameOverTitleText = CreateUiText(card.transform, "GameOverTitle", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 120f), new Vector2(600f, 80f), gameOverFontSize, TextAlignmentOptions.Center);
+        gameOverTitleText.text = "GAME OVER";
+        StyleHudText(gameOverTitleText, TextAlignmentOptions.Center);
 
-        gameOverScoreText = CreateUiText(card.transform, "GameOverScore", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 30f), new Vector2(600f, 70f), gameOverFontSize, TextAlignmentOptions.Center);
-        gameOverBestText = CreateUiText(card.transform, "GameOverBest", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -20f), new Vector2(600f, 60f), gameOverFontSize, TextAlignmentOptions.Center);
+        GameObject divider = new GameObject("Divider", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        divider.transform.SetParent(card.transform, false);
+        RectTransform divRt = divider.GetComponent<RectTransform>();
+        divRt.anchorMin = new Vector2(0.5f, 0.5f);
+        divRt.anchorMax = new Vector2(0.5f, 0.5f);
+        divRt.pivot = new Vector2(0.5f, 0.5f);
+        divRt.anchoredPosition = new Vector2(0f, 84f);
+        divRt.sizeDelta = new Vector2(120f, 5f);
+        gameOverAccent = divider.GetComponent<Image>();
+        gameOverAccent.raycastTarget = false;
+        gameOverAccent.color = uiAccentColor;
+        if (!barPillSprite) barPillSprite = CreateRoundedSprite(64, 32, 16);
+        if (barPillSprite) { gameOverAccent.sprite = barPillSprite; gameOverAccent.type = Image.Type.Sliced; }
+
+        gameOverScoreText = CreateUiText(card.transform, "GameOverScore", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 45f), new Vector2(620f, 90f), gameOverFontSize, TextAlignmentOptions.Center);
+        gameOverBestText = CreateUiText(card.transform, "GameOverBest", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -55f), new Vector2(600f, 50f), gameOverFontSize, TextAlignmentOptions.Center);
         gameOverHintText = CreateUiText(card.transform, "GameOverHint", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -120f), new Vector2(600f, 60f), gameOverFontSize, TextAlignmentOptions.Center);
         gameOverHintText.text = "TAP TO RESTART";
-        ApplyFont(gameOverScoreText);
-        ApplyFont(gameOverBestText);
-        ApplyFont(gameOverHintText);
+        StyleHudText(gameOverScoreText, TextAlignmentOptions.Center);
+        StyleHudText(gameOverBestText, TextAlignmentOptions.Center);
+        StyleHudText(gameOverHintText, TextAlignmentOptions.Center);
 
         ApplyRoundedCard(cardImg);
 
@@ -965,27 +1208,60 @@ public class GameManager : MonoBehaviour
         gameOverPanel.SetActive(false);
     }
 
+    System.Collections.IEnumerator AnimateGameOverIn()
+    {
+        float dur = 0.38f;
+        float t = 0f;
+        if (gameOverGroup) gameOverGroup.alpha = 0f;
+        if (gameOverCardRect) gameOverCardRect.localScale = Vector3.one * 0.85f;
+        while (t < dur)
+        {
+            t += Time.unscaledDeltaTime;
+            float p = Mathf.Clamp01(t / dur);
+            if (gameOverGroup) gameOverGroup.alpha = p;
+            if (gameOverCardRect) gameOverCardRect.localScale = Vector3.one * Mathf.Lerp(0.85f, 1f, EaseOutBack(p));
+            yield return null;
+        }
+        if (gameOverGroup) gameOverGroup.alpha = 1f;
+        if (gameOverCardRect) gameOverCardRect.localScale = Vector3.one;
+    }
+
+    static float EaseOutBack(float x)
+    {
+        const float c1 = 1.70158f;
+        const float c3 = c1 + 1f;
+        return 1f + c3 * Mathf.Pow(x - 1f, 3f) + c1 * Mathf.Pow(x - 1f, 2f);
+    }
+
     void UpdateGameOverUi()
     {
-        int scoreInt = Mathf.FloorToInt(score);
-        int bestStored = PlayerPrefs.GetInt(BestScoreKey, 0);
-        bestScore = Mathf.Max(bestScore, bestStored);
-        int bestDisplay = Mathf.Max(bestScore, scoreInt);
+        int finalWeight = dogWeight ? Mathf.RoundToInt(dogWeight.currentWeight) : 0;
+
+        Color outcomeColor = won ? uiBarFullColor : uiUrgentColor;
+        if (gameOverTitleText)
+        {
+            gameOverTitleText.text = won ? winTitle : loseTitle;
+            gameOverTitleText.color = outcomeColor;
+            ApplyFont(gameOverTitleText);
+        }
+        if (gameOverAccent) gameOverAccent.color = outcomeColor;
         if (gameOverScoreText)
         {
-            gameOverScoreText.text = "SCORE " + scoreInt.ToString();
-            gameOverScoreText.fontSize = gameOverFontSize;
+            gameOverScoreText.text = won ? winMessage : loseMessage;
+            gameOverScoreText.fontSize = Mathf.RoundToInt(gameOverFontSize * 0.7f);
             ApplyFont(gameOverScoreText);
         }
         if (gameOverBestText)
         {
-            gameOverBestText.text = "BEST " + bestDisplay.ToString();
-            gameOverBestText.fontSize = gameOverFontSize;
+            gameOverBestText.text = finalWeight + " kg";
+            gameOverBestText.fontSize = Mathf.RoundToInt(gameOverFontSize * 0.65f);
+            gameOverBestText.color = uiAccentColor;
             ApplyFont(gameOverBestText);
         }
         if (gameOverHintText)
         {
-            gameOverHintText.fontSize = gameOverFontSize;
+            gameOverHintText.text = won ? "TAP TO PLAY AGAIN" : "TAP TO TRY AGAIN";
+            gameOverHintText.fontSize = Mathf.RoundToInt(gameOverFontSize * 0.6f);
             ApplyFont(gameOverHintText);
         }
     }
@@ -996,7 +1272,16 @@ public class GameManager : MonoBehaviour
         distance = 0f;
         ElapsedTime = 0f;
         moveSpeed = startSpeed;
+        won = false;
+        timeRemaining = timeLimit;
+        if (!dogWeight) dogWeight = FindObjectOfType<DogWeightVisual>();
+        float startW = dogWeight ? dogWeight.currentWeight : barFloorKg;
+        barFillDisplay = Mathf.Clamp01(Mathf.InverseLerp(barFloorKg, winWeightKg, startW));
+        lastPunchWeight = startW;
+        weightPunch = 0f;
+        punchInit = true;
         UpdateUi();
+        UpdateGoalUi();
         SetState(GameState.Running);
     }
 
@@ -1007,6 +1292,10 @@ public class GameManager : MonoBehaviour
 
         if (startPromptText) startPromptText.gameObject.SetActive(State == GameState.Waiting);
         if (gameOverPanel) gameOverPanel.SetActive(State == GameState.GameOver);
+        if (timerText) timerText.gameObject.SetActive(IsRunning);
+        if (timerPillRoot) timerPillRoot.gameObject.SetActive(IsRunning);
+        if (weightText) weightText.gameObject.SetActive(IsRunning);
+        if (weightBarRoot) weightBarRoot.gameObject.SetActive(IsRunning);
         if (audioController) audioController.SetRunning(IsRunning);
     }
 

@@ -14,7 +14,7 @@ public class ObstacleMover : MonoBehaviour
 
         if (transform.position.z < destroyZ)
         {
-            Destroy(gameObject);
+            ObjectPool.Release(gameObject);
         }
     }
 }

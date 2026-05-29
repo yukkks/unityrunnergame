@@ -5,6 +5,8 @@ public class CoinPickup : MonoBehaviour
     public float rotateSpeed = 180f;
     public float destroyZ = -10f;
     public float points = 10f;
+    [Tooltip("Kilograms gained per treat eaten.")]
+    public float weightGain = 4f;
 
     [Header("Pickup Animation")]
     public float pickupDuration = 0.35f;
@@ -49,20 +51,40 @@ public class CoinPickup : MonoBehaviour
 
         if (transform.position.z < destroyZ)
         {
-            Destroy(gameObject);
+            ObjectPool.Release(gameObject);
         }
     }
 
+    void OnEnable()
+    {
+        // Reset per-life state so a pooled coin behaves like a fresh one.
+        picked = false;
+        Collider col = GetComponent<Collider>();
+        if (col) col.enabled = true;
+        if (cachedRenderer)
+        {
+            cachedRenderer.enabled = true;
+            cachedRenderer.SetPropertyBlock(null);
+        }
+    }
     void OnTriggerEnter(Collider other)
     {
         if (!other.GetComponent<PlayerController>()) return;
         if (picked) return;
         picked = true;
 
+        DogWeightVisual dogWeight = other.GetComponent<DogWeightVisual>();
+
+        if (dogWeight)
+        {
+            dogWeight.GainWeight(weightGain);
+        }
+
         if (GameManager.Instance)
         {
             GameManager.Instance.AddScore(points);
         }
+
         if (AudioController.Instance)
         {
             AudioController.Instance.PlayCoin();
@@ -73,7 +95,6 @@ public class CoinPickup : MonoBehaviour
 
         StartCoroutine(PlayPickupSplit());
     }
-
     System.Collections.IEnumerator PlayPickupSplit()
     {
         Vector3 startScale = transform.localScale;
@@ -93,7 +114,7 @@ public class CoinPickup : MonoBehaviour
                 t0 += Time.deltaTime;
                 yield return null;
             }
-            Destroy(gameObject);
+            ObjectPool.Release(gameObject);
             yield break;
         }
 
@@ -135,7 +156,7 @@ public class CoinPickup : MonoBehaviour
 
         if (left) Destroy(left.gameObject);
         if (right) Destroy(right.gameObject);
-        Destroy(gameObject);
+        ObjectPool.Release(gameObject);
     }
 
     Renderer CreateHalf(string name, Mesh mesh, Material mat, Vector3 pos, Quaternion rot, Vector3 scale)

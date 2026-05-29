@@ -11,6 +11,8 @@ public class Spawner : MonoBehaviour
     public float spawnZ = 12f;
     public float coinY = 0.9f;
     public float coinZ = 12f;
+    [Tooltip("Extra depth offset so a coin never spawns at the same Z as the obstacle in its row (prevents visual overlap).")]
+    public float coinDepthOffset = 4f;
 
     [Header("Spawn Rate")]
     public float startMinInterval = 0.8f;
@@ -110,13 +112,13 @@ public class Spawner : MonoBehaviour
         float x = LaneToX(obstacleLane);
         Vector3 pos = new Vector3(x, spawnY, spawnZ);
 
-        Instantiate(obstaclePrefab, pos, Quaternion.identity);
+        ObjectPool.Get(obstaclePrefab, pos, Quaternion.identity);
 
         if (ShouldSpawnCoin(obstacleLane))
         {
             int coinLane = GetCoinLane(obstacleLane);
             float coinX = LaneToX(coinLane);
-            Vector3 coinPos = new Vector3(coinX, coinY, coinZ);
+            Vector3 coinPos = new Vector3(coinX, coinY, coinZ + coinDepthOffset);
             SpawnCoin(coinPos);
         }
     }
@@ -221,7 +223,7 @@ public class Spawner : MonoBehaviour
     {
         if (coinPrefab)
         {
-            GameObject coin = Instantiate(coinPrefab, pos, Quaternion.identity);
+            GameObject coin = ObjectPool.Get(coinPrefab, pos, Quaternion.identity);
             EnsureCoinSetup(coin);
             return;
         }

@@ -10,6 +10,15 @@ public class PlayerController : MonoBehaviour
     private int lane = 1;
     public CameraFollow cameraFollow;
 
+    [Header("Swipe (mobile)")]
+    [Tooltip("Minimum horizontal swipe distance as a fraction of screen width.")]
+    public float swipeThresholdFraction = 0.05f;
+    [Tooltip("Absolute minimum swipe distance in pixels (small-screen floor).")]
+    public float minSwipePixels = 40f;
+
+    private Vector2 swipeStart;
+    private bool swiping;
+
     [Header("VFX")]
     public ParticleSystem thruster;
     public Color thrusterColor = new Color(1f, 1f, 1f, 1f);
@@ -17,6 +26,10 @@ public class PlayerController : MonoBehaviour
     public Vector3 thrusterLocalOffset = new Vector3(0f, 0.2f, -0.4f);
     public ParticleSystem crashFxPrefab;
     public Material thrusterMaterial;
+
+    [Header("Weight")]
+    [Tooltip("Kilograms lost when hitting an obstacle.")]
+    public float weightLoss = 8f;
 
     private ParticleSystem.EmissionModule thrusterEmission;
     private Material runtimeThrusterMaterial;
@@ -46,13 +59,9 @@ public class PlayerController : MonoBehaviour
         {
             laneDelta = 1;
         }
-        else if (Input.GetMouseButtonDown(0))
+        else
         {
-            laneDelta = (Input.mousePosition.x < Screen.width * 0.5f) ? -1 : 1;
-        }
-        else if (Input.touchCount > 0 && Input.GetTouch(0).phase == TouchPhase.Began)
-        {
-            laneDelta = (Input.GetTouch(0).position.x < Screen.width * 0.5f) ? -1 : 1;
+            laneDelta = ReadSwipe();
         }
 
         if (laneDelta != 0)
@@ -83,16 +92,62 @@ public class PlayerController : MonoBehaviour
             main.startColor = thrusterColor;
         }
     }
+    // Returns -1 (left), 1 (right), or 0 — from a touch swipe or a mouse drag.
+    int ReadSwipe()
+    {
+        if (Input.touchCount > 0)
+        {
+            Touch t = Input.GetTouch(0);
+            if (t.phase == TouchPhase.Began)
+            {
+                swipeStart = t.position;
+                swiping = true;
+            }
+            else if (swiping && (t.phase == TouchPhase.Ended || t.phase == TouchPhase.Canceled))
+            {
+                swiping = false;
+                return SwipeDir(t.position - swipeStart);
+            }
+            return 0;
+        }
+
+        if (Input.GetMouseButtonDown(0))
+        {
+            swipeStart = (Vector2)Input.mousePosition;
+            swiping = true;
+        }
+        else if (swiping && Input.GetMouseButtonUp(0))
+        {
+            swiping = false;
+            return SwipeDir((Vector2)Input.mousePosition - swipeStart);
+        }
+        return 0;
+    }
+
+    int SwipeDir(Vector2 delta)
+    {
+        float threshold = Mathf.Max(minSwipePixels, Screen.width * swipeThresholdFraction);
+        if (Mathf.Abs(delta.x) < threshold) return 0;          // too short
+        if (Mathf.Abs(delta.x) < Mathf.Abs(delta.y)) return 0; // mostly vertical
+        return delta.x > 0f ? 1 : -1;
+    }
 
     void OnTriggerEnter(Collider other)
     {
         if (other.CompareTag("Obstacle"))
         {
+            DogWeightVisual dogWeight = GetComponent<DogWeightVisual>();
+
+            if (dogWeight)
+            {
+                dogWeight.LoseWeight(weightLoss);
+            }
+
             SpawnCrashFx();
-            GameManager.Instance.GameOver();
+
+            ObjectPool.Release(other.gameObject);
         }
     }
-
     void Start()
     {
         int maxLane = Mathf.Max(0, laneCount - 1);
