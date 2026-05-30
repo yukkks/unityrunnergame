@@ -1147,6 +1147,79 @@ public class GameManager : MonoBehaviour
         weightBarFill.raycastTarget = false;
         weightBarFill.color = uiBarLowColor;
         if (barPillSprite) { weightBarFill.sprite = barPillSprite; weightBarFill.type = Image.Type.Sliced; }
+
+        // Themed left-cap badge: a circular chip with a paw glyph, overhanging
+        // the bar's left end so the meter reads as "the dog's belly filling up".
+        float cap = weightBarRoot.sizeDelta.y + 14f;
+        GameObject badge = new GameObject("WeightIcon", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        badge.transform.SetParent(root.transform, false);
+        RectTransform badgeRt = badge.GetComponent<RectTransform>();
+        badgeRt.anchorMin = new Vector2(0f, 0.5f);
+        badgeRt.anchorMax = new Vector2(0f, 0.5f);
+        badgeRt.pivot = new Vector2(0.5f, 0.5f);
+        badgeRt.anchoredPosition = new Vector2(2f, 0f);
+        badgeRt.sizeDelta = new Vector2(cap, cap);
+        Image badgeImg = badge.GetComponent<Image>();
+        badgeImg.raycastTarget = false;
+        badgeImg.color = uiAccentColor;
+        if (barPillSprite) { badgeImg.sprite = barPillSprite; badgeImg.type = Image.Type.Sliced; }
+
+        // Paw drawn procedurally (the Fredoka UI font has no emoji glyphs).
+        GameObject pawObj = new GameObject("Paw", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        pawObj.transform.SetParent(badge.transform, false);
+        RectTransform pawRt = pawObj.GetComponent<RectTransform>();
+        pawRt.anchorMin = new Vector2(0.5f, 0.5f);
+        pawRt.anchorMax = new Vector2(0.5f, 0.5f);
+        pawRt.pivot = new Vector2(0.5f, 0.5f);
+        pawRt.anchoredPosition = Vector2.zero;
+        pawRt.sizeDelta = new Vector2(cap * 0.62f, cap * 0.62f);
+        Image pawImg = pawObj.GetComponent<Image>();
+        pawImg.raycastTarget = false;
+        pawImg.color = uiShadowColor;
+        if (pawSprite == null) pawSprite = CreatePawSprite();
+        pawImg.sprite = pawSprite;
+    }
+
+    private Sprite pawSprite;
+
+    // A simple paw: one big pad + four toe beans, drawn into an alpha texture.
+    Sprite CreatePawSprite(int size = 96)
+    {
+        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        tex.wrapMode = TextureWrapMode.Clamp;
+        tex.filterMode = FilterMode.Bilinear;
+        var clear = new Color(1f, 1f, 1f, 0f);
+        var px = new Color[size * size];
+        for (int i = 0; i < px.Length; i++) px[i] = clear;
+
+        float s = size;
+        // (cx, cy, radius) in normalized [0..1], y up.
+        Vector3[] blobs =
+        {
+            new Vector3(0.50f, 0.40f, 0.24f), // main pad
+            new Vector3(0.26f, 0.62f, 0.11f), // toe
+            new Vector3(0.43f, 0.74f, 0.115f),
+            new Vector3(0.59f, 0.74f, 0.115f),
+            new Vector3(0.75f, 0.62f, 0.11f),
+        };
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                float nx = x / s, ny = y / s;
+                float a = 0f;
+                foreach (var b in blobs)
+                {
+                    float d = Mathf.Sqrt((nx - b.x) * (nx - b.x) + (ny - b.y) * (ny - b.y));
+                    float edge = (b.z - d) * s; // pixels inside the edge
+                    a = Mathf.Max(a, Mathf.Clamp01(edge + 0.5f));
+                }
+                px[y * size + x] = new Color(1f, 1f, 1f, a);
+            }
+        }
+        tex.SetPixels(px);
+        tex.Apply();
+        return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f);
     }
 
     void ApplyRoundedCard(Image img)
