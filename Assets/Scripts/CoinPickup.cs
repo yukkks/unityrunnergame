@@ -6,7 +6,7 @@ public class CoinPickup : MonoBehaviour
     public float destroyZ = -10f;
     public float points = 10f;
     [Tooltip("Kilograms gained per treat eaten.")]
-    public float weightGain = 4f;
+    public float weightGain = 2f;
 
     [Header("Pickup Animation")]
     public float pickupDuration = 0.35f;

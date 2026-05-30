@@ -1635,11 +1635,11 @@ MonoBehaviour:
   endMaxInterval: 0.7
   rampDuration: 60
   usePatterns: 1
-  coinSpawnChance: 1
+  coinSpawnChance: 0.6
   coinStreaks: 1
   coinStreakLength: {x: 4, y: 8}
   coinStreakChance: 0.55
-  bonusLaneChance: 0.18
+  bonusLaneChance: 0.1
 --- !u!4 &31877909
 Transform:
   m_ObjectHideFlags: 0
