@@ -718,17 +718,42 @@ public class GameManager : MonoBehaviour
         rect.localScale = Vector3.one;
     }
 
-    void StyleHudText(TMP_Text text, TextAlignmentOptions alignment)
+    void StyleHudText(TMP_Text text, TextAlignmentOptions alignment, bool wrap = false)
     {
         if (!text) return;
         text.alignment = alignment;
-        text.enableWordWrapping = false;
+        text.textWrappingMode = wrap ? TextWrappingModes.Normal : TextWrappingModes.NoWrap;
         text.fontStyle = FontStyles.Normal;
         text.color = uiTextColor;
         text.outlineWidth = 0f;
         text.raycastTarget = false;
         ApplyFont(text);
         ApplySoftShadow(text);
+    }
+
+    // Builds a white rounded-rect sprite with 9-slice borders so UI pills/bars
+    // keep crisp rounded corners at any size. Image.color tints it. Generated
+    // at runtime so we don't depend on an imported sprite asset.
+    Sprite MakeRoundedSprite(int size = 48, int radius = 24)
+    {
+        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        tex.wrapMode = TextureWrapMode.Clamp;
+        tex.filterMode = FilterMode.Bilinear;
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                float dx = Mathf.Max(Mathf.Max(radius - x, x - (size - 1 - radius)), 0f);
+                float dy = Mathf.Max(Mathf.Max(radius - y, y - (size - 1 - radius)), 0f);
+                float dist = Mathf.Sqrt(dx * dx + dy * dy);
+                float a = Mathf.Clamp01(radius - dist + 0.5f); // ~1px antialiasing at the edge
+                tex.SetPixel(x, y, new Color(1f, 1f, 1f, a));
+            }
+        }
+        tex.Apply();
+        var border = new Vector4(radius, radius, radius, radius);
+        return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f),
+            100f, 0, SpriteMeshType.FullRect, border);
     }
 
     // Warm soft drop shadow via the TMP underlay feature (replaces the old
@@ -1057,7 +1082,7 @@ public class GameManager : MonoBehaviour
         weightBarRoot.anchorMax = new Vector2(0.5f, 1f);
         weightBarRoot.pivot = new Vector2(0.5f, 1f);
         weightBarRoot.anchoredPosition = new Vector2(0f, -184f);
-        weightBarRoot.sizeDelta = new Vector2(540f, 26f);
+        weightBarRoot.sizeDelta = new Vector2(560f, 42f);
 
         GameObject track = new GameObject("Track", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
         track.transform.SetParent(root.transform, false);
