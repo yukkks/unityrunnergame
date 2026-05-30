@@ -243,10 +243,13 @@ public class Spawner : MonoBehaviour
         Collider col = coin.GetComponent<Collider>();
         if (col) col.isTrigger = true;
 
-        if (!coin.GetComponent<CoinPickup>())
+        CoinPickup pickup = coin.GetComponent<CoinPickup>();
+        if (!pickup)
         {
-            coin.AddComponent<CoinPickup>();
+            pickup = coin.AddComponent<CoinPickup>();
         }
+        // The steak treat shouldn't spin like the old coin.
+        pickup.rotateSpeed = 0f;
     }
 
     void ApplyRuntimeCoinMaterial(GameObject coin)
