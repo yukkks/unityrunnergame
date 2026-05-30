@@ -240,8 +240,27 @@ public class Spawner : MonoBehaviour
 
     void EnsureCoinSetup(GameObject coin)
     {
-        Collider col = coin.GetComponent<Collider>();
-        if (col) col.isTrigger = true;
+        // A convex MeshCollider as a trigger is unreliable for pickup detection.
+        // Use a BoxCollider trigger sized to the renderer (same approach as the
+        // obstacle, which works) so OnTriggerEnter fires consistently.
+        MeshCollider mc = coin.GetComponent<MeshCollider>();
+        if (mc) mc.enabled = false;
+
+        BoxCollider box = coin.GetComponent<BoxCollider>();
+        if (!box) box = coin.AddComponent<BoxCollider>();
+        box.isTrigger = true;
+        Renderer rend = coin.GetComponentInChildren<Renderer>();
+        if (rend)
+        {
+            // Convert world bounds to local box size/center.
+            Bounds b = rend.bounds;
+            Vector3 ls = coin.transform.lossyScale;
+            box.center = coin.transform.InverseTransformPoint(b.center);
+            box.size = new Vector3(
+                b.size.x / Mathf.Max(0.0001f, ls.x),
+                b.size.y / Mathf.Max(0.0001f, ls.y),
+                b.size.z / Mathf.Max(0.0001f, ls.z));
+        }
 
         CoinPickup pickup = coin.GetComponent<CoinPickup>();
         if (!pickup)
