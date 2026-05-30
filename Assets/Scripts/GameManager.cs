@@ -567,6 +567,9 @@ public class GameManager : MonoBehaviour
         }
         StyleHudText(weightText, TextAlignmentOptions.Center);
         weightText.fontStyle = FontStyles.Bold;
+        // The kg text overlaps both the dark track and the light fill — a dark
+        // outline keeps the cream text legible across both.
+        ApplyTextOutline(weightText, uiShadowColor, 0.2f);
 
         if (!startPromptText)
         {
@@ -799,6 +802,18 @@ public class GameManager : MonoBehaviour
         mat.SetFloat(ShaderUtilities.ID_UnderlayOffsetY, -0.6f);
         mat.SetFloat(ShaderUtilities.ID_UnderlayDilate, 0.1f);
         mat.SetFloat(ShaderUtilities.ID_UnderlaySoftness, 0.3f);
+    }
+
+    // Dark outline around a glyph so light text stays readable on BOTH the dark
+    // track and the light bar fill it sits over. Per-text instanced material.
+    void ApplyTextOutline(TMP_Text text, Color col, float width)
+    {
+        if (!text) return;
+        Material mat = text.fontMaterial;
+        if (!mat) return;
+        mat.EnableKeyword(ShaderUtilities.Keyword_Outline);
+        mat.SetColor(ShaderUtilities.ID_OutlineColor, col);
+        mat.SetFloat(ShaderUtilities.ID_OutlineWidth, width);
     }
 
     void ApplyFont(TMP_Text text)
