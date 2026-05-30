@@ -1625,14 +1625,14 @@ MonoBehaviour:
   laneOffset: 1.6
   laneCount: 3
   spawnY: 0.8
-  spawnZ: 22
+  spawnZ: 28
   coinY: 0.9
-  coinZ: 22
+  coinZ: 28
   coinDepthOffset: 4
-  startMinInterval: 0.9
-  startMaxInterval: 1.4
-  endMinInterval: 0.35
-  endMaxInterval: 0.7
+  startMinInterval: 0.6
+  startMaxInterval: 0.95
+  endMinInterval: 0.28
+  endMaxInterval: 0.5
   rampDuration: 60
   usePatterns: 1
   coinSpawnChance: 0.6
