@@ -63574,6 +63574,8 @@ MonoBehaviour:
   laneRollReturn: 10
   fovKick: 3.5
   fovReturn: 6
+  shakeAmp: 0.35
+  shakeDur: 0.28
 --- !u!1 &962581952
 GameObject:
   m_ObjectHideFlags: 0
