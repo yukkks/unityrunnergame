@@ -1629,16 +1629,16 @@ MonoBehaviour:
   coinY: 0.9
   coinZ: 28
   coinDepthOffset: 4
-  startMinInterval: 0.6
-  startMaxInterval: 0.95
-  endMinInterval: 0.28
-  endMaxInterval: 0.5
+  startMinInterval: 0.5
+  startMaxInterval: 0.8
+  endMinInterval: 0.22
+  endMaxInterval: 0.42
   rampDuration: 60
   usePatterns: 1
-  coinSpawnChance: 0.6
+  coinSpawnChance: 0.3
   coinStreaks: 1
   coinStreakLength: {x: 4, y: 8}
-  coinStreakChance: 0.55
+  coinStreakChance: 0.1
   bonusLaneChance: 0.1
 --- !u!4 &31877909
 Transform:
