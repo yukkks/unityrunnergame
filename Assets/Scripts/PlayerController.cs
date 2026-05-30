@@ -158,25 +158,23 @@ public class PlayerController : MonoBehaviour
         return delta.x > 0f ? 1 : -1;
     }
 
-    void OnTriggerEnter(Collider other)
+    // Called by ObstacleHit (which lives on the obstacle and detects the player
+    // via GetComponent<PlayerController>(), mirroring how CoinPickup drives
+    // pickups). The obstacle handles its own despawn.
+    public void HitByObstacle()
     {
-        if (other.CompareTag("Obstacle"))
+        DogWeightVisual dogWeight = GetComponent<DogWeightVisual>();
+
+        if (dogWeight)
         {
-            DogWeightVisual dogWeight = GetComponent<DogWeightVisual>();
-
-            if (dogWeight)
-            {
-                dogWeight.LoseWeight(weightLoss);
-            }
-
-            SpawnCrashFx();
-
-            if (AudioController.Instance) AudioController.Instance.PlayWhimper();
-            if (!cameraFollow) cameraFollow = FindObjectOfType<CameraFollow>();
-            if (cameraFollow) cameraFollow.Shake();
-
-            ObjectPool.Release(other.gameObject);
+            dogWeight.LoseWeight(weightLoss);
         }
+
+        SpawnCrashFx();
+
+        if (AudioController.Instance) AudioController.Instance.PlayWhimper();
+        if (!cameraFollow) cameraFollow = FindObjectOfType<CameraFollow>();
+        if (cameraFollow) cameraFollow.Shake();
     }
     void Start()
     {
