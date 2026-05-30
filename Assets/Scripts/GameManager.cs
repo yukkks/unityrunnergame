@@ -1309,7 +1309,7 @@ public class GameManager : MonoBehaviour
         RectTransform cardRect = card.GetComponent<RectTransform>();
         cardRect.anchorMin = cardRect.anchorMax = cardRect.pivot = new Vector2(0.5f, 0.5f);
         cardRect.anchoredPosition = Vector2.zero;
-        cardRect.sizeDelta = new Vector2(720f, 560f);
+        cardRect.sizeDelta = new Vector2(720f, 640f);
         gameOverCardRect = cardRect;
         Image cardImg = card.GetComponent<Image>();
         cardImg.color = new Color(0.16f, 0.11f, 0.08f, 0.99f);
@@ -1363,7 +1363,7 @@ public class GameManager : MonoBehaviour
         StyleHudText(gameOverScoreText, TextAlignmentOptions.Center, true);
 
         // Hero number (the final weight) — the big celebratory stat.
-        gameOverNumber = CreateUiText(card.transform, "GameOverNumber", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -360f), new Vector2(640f, 96f), 84, TextAlignmentOptions.Center);
+        gameOverNumber = CreateUiText(card.transform, "GameOverNumber", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -370f), new Vector2(640f, 110f), 78, TextAlignmentOptions.Center);
         StyleHudText(gameOverNumber, TextAlignmentOptions.Center);
         gameOverNumber.fontStyle = FontStyles.Bold;
         gameOverBestText = gameOverNumber; // keep legacy ref pointed at the number
@@ -1374,8 +1374,8 @@ public class GameManager : MonoBehaviour
         RectTransform btnRt = button.GetComponent<RectTransform>();
         btnRt.anchorMin = btnRt.anchorMax = new Vector2(0.5f, 0f);
         btnRt.pivot = new Vector2(0.5f, 0f);
-        btnRt.anchoredPosition = new Vector2(0f, 36f);
-        btnRt.sizeDelta = new Vector2(360f, 86f);
+        btnRt.anchoredPosition = new Vector2(0f, 40f);
+        btnRt.sizeDelta = new Vector2(380f, 92f);
         gameOverButtonBg = button.GetComponent<Image>();
         gameOverButtonBg.raycastTarget = false;
         gameOverButtonBg.color = uiAccentColor;
