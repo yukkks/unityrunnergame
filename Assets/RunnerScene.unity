@@ -1621,7 +1621,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Spawner
   obstaclePrefab: {fileID: 5363255825161383689, guid: e9ddb377246b24da89c29561d814d139, type: 3}
-  coinPrefab: {fileID: 0}
+  coinPrefab: {fileID: 2916113371745961683, guid: c71d79f3ea274af429d818a64aac3a2f, type: 3}
   laneOffset: 1.6
   laneCount: 3
   spawnY: 0.8
