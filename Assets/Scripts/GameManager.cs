@@ -532,26 +532,32 @@ public class GameManager : MonoBehaviour
 
         if (!startPromptText)
         {
-            startPromptText = CreateUiText(hudParent, "StartPrompt", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 180f), new Vector2(820f, 150f), 78, TextAlignmentOptions.Center);
-            startPromptText.text = "TAP TO START";
+            startPromptText = CreateUiText(hudParent, "StartPrompt", new Vector2(0.1f, 0.5f), new Vector2(0.9f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 180f), new Vector2(0f, 420f), 78, TextAlignmentOptions.Center);
         }
         else if (startPromptText.transform.parent != hudParent)
         {
             startPromptText.transform.SetParent(hudParent, false);
         }
-        else
+        // Always apply layout (regardless of create / reparent path): a box that
+        // stretches 10%-90% of screen width so it can never run off the edges,
+        // with word wrap + auto-sizing keeping the copy inside it.
         {
             RectTransform rect = startPromptText.rectTransform;
-            rect.anchorMin = new Vector2(0.5f, 0.5f);
-            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.anchorMin = new Vector2(0.1f, 0.5f);
+            rect.anchorMax = new Vector2(0.9f, 0.5f);
             rect.pivot = new Vector2(0.5f, 0.5f);
             rect.anchoredPosition = new Vector2(0f, 180f);
-            rect.sizeDelta = new Vector2(820f, 150f);
-            startPromptText.fontSize = 78;
-            startPromptText.text = "TAP TO START";
+            rect.offsetMin = new Vector2(0f, rect.offsetMin.y);
+            rect.offsetMax = new Vector2(0f, rect.offsetMax.y);
+            rect.sizeDelta = new Vector2(rect.sizeDelta.x, 420f);
         }
-        if (startPromptText) startPromptText.text = startPrompt;
-        StyleHudText(startPromptText, TextAlignmentOptions.Center);
+        // Two-tier mobile CTA: big bold title, smaller subtitle beneath.
+        startPromptText.text = BuildStartPromptRichText(startPrompt);
+        startPromptText.enableAutoSizing = true;
+        startPromptText.fontSizeMin = 30f;
+        startPromptText.fontSizeMax = 86f;
+        startPromptText.lineSpacing = 8f;
+        StyleHudText(startPromptText, TextAlignmentOptions.Center, true);
 
         if (!showScoreHud)
         {
@@ -731,29 +737,15 @@ public class GameManager : MonoBehaviour
         ApplySoftShadow(text);
     }
 
-    // Builds a white rounded-rect sprite with 9-slice borders so UI pills/bars
-    // keep crisp rounded corners at any size. Image.color tints it. Generated
-    // at runtime so we don't depend on an imported sprite asset.
-    Sprite MakeRoundedSprite(int size = 48, int radius = 24)
+    // First line = big bold title, remaining lines = smaller subtitle.
+    string BuildStartPromptRichText(string raw)
     {
-        var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
-        tex.wrapMode = TextureWrapMode.Clamp;
-        tex.filterMode = FilterMode.Bilinear;
-        for (int y = 0; y < size; y++)
-        {
-            for (int x = 0; x < size; x++)
-            {
-                float dx = Mathf.Max(Mathf.Max(radius - x, x - (size - 1 - radius)), 0f);
-                float dy = Mathf.Max(Mathf.Max(radius - y, y - (size - 1 - radius)), 0f);
-                float dist = Mathf.Sqrt(dx * dx + dy * dy);
-                float a = Mathf.Clamp01(radius - dist + 0.5f); // ~1px antialiasing at the edge
-                tex.SetPixel(x, y, new Color(1f, 1f, 1f, a));
-            }
-        }
-        tex.Apply();
-        var border = new Vector4(radius, radius, radius, radius);
-        return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f),
-            100f, 0, SpriteMeshType.FullRect, border);
+        if (string.IsNullOrEmpty(raw)) return raw;
+        int nl = raw.IndexOf('\n');
+        if (nl < 0) return "<b>" + raw + "</b>";
+        string title = raw.Substring(0, nl).Trim();
+        string sub = raw.Substring(nl + 1).Trim();
+        return "<b>" + title + "</b>\n<size=55%>" + sub + "</size>";
     }
 
     // Warm soft drop shadow via the TMP underlay feature (replaces the old
