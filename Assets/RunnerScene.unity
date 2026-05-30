@@ -53640,9 +53640,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0857900d398e04585ade8cbb979eeaee, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameManager
-  startSpeed: 10
-  maxSpeed: 22
-  speedRamp: 0.25
+  startSpeed: 13
+  maxSpeed: 28
+  speedRamp: 0.4
   scoreText: {fileID: 854551781}
   bestScoreText: {fileID: 0}
   distanceText: {fileID: 0}
