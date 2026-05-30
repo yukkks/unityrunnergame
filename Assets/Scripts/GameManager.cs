@@ -378,11 +378,12 @@ public class GameManager : MonoBehaviour
         if (gameOverPanel && gameOverPanel.activeInHierarchy)
         {
             StartCoroutine(AnimateGameOverIn());
+            if (victory) StartCoroutine(PlayConfetti());
         }
         if (audioController)
         {
-            if (victory) audioController.PlayCoin();
-            else audioController.PlayHit();
+            if (victory) audioController.PlayWin();
+            else audioController.PlayLose();
         }
     }
 
@@ -1224,6 +1225,57 @@ public class GameManager : MonoBehaviour
         }
         if (gameOverGroup) gameOverGroup.alpha = 1f;
         if (gameOverCardRect) gameOverCardRect.localScale = Vector3.one;
+    }
+
+    System.Collections.IEnumerator PlayConfetti()
+    {
+        if (!gameOverPanel) yield break;
+        if (!barPillSprite) barPillSprite = CreateRoundedSprite(64, 32, 16);
+
+        Color[] cols = { uiBarFullColor, uiAccentColor, new Color(1f, 0.45f, 0.45f), new Color(0.55f, 0.8f, 1f), Color.white };
+        const int n = 30;
+        var rts = new RectTransform[n];
+        var vel = new Vector2[n];
+        var spin = new float[n];
+        var imgs = new Image[n];
+
+        for (int i = 0; i < n; i++)
+        {
+            GameObject go = new GameObject("Confetti", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            go.transform.SetParent(gameOverPanel.transform, false);
+            RectTransform rt = go.GetComponent<RectTransform>();
+            rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.sizeDelta = new Vector2(Random.Range(10f, 20f), Random.Range(14f, 28f));
+            rt.anchoredPosition = new Vector2(Random.Range(-140f, 140f), Random.Range(120f, 200f));
+            Image img = go.GetComponent<Image>();
+            img.sprite = barPillSprite;
+            img.color = cols[Random.Range(0, cols.Length)];
+            img.raycastTarget = false;
+            rts[i] = rt; imgs[i] = img;
+            vel[i] = new Vector2(Random.Range(-300f, 300f), Random.Range(300f, 620f));
+            spin[i] = Random.Range(-360f, 360f);
+        }
+
+        float t = 0f;
+        const float dur = 1.8f;
+        const float grav = 1100f;
+        while (t < dur)
+        {
+            float dt = Time.unscaledDeltaTime;
+            t += dt;
+            for (int i = 0; i < n; i++)
+            {
+                if (!rts[i]) continue;
+                vel[i].y -= grav * dt;
+                rts[i].anchoredPosition += vel[i] * dt;
+                rts[i].Rotate(0f, 0f, spin[i] * dt);
+                Color c = imgs[i].color;
+                c.a = Mathf.Clamp01(1f - t / dur);
+                imgs[i].color = c;
+            }
+            yield return null;
+        }
+        for (int i = 0; i < n; i++) if (rts[i]) Destroy(rts[i].gameObject);
     }
 
     static float EaseOutBack(float x)

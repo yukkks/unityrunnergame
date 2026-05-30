@@ -88,6 +88,7 @@ public class CoinPickup : MonoBehaviour
         if (AudioController.Instance)
         {
             AudioController.Instance.PlayCoin();
+            AudioController.Instance.PlayBark();
         }
 
         Collider col = GetComponent<Collider>();

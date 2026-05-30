@@ -19,6 +19,13 @@ public class CameraFollow : MonoBehaviour
     public float fovKick = 3.5f;
     public float fovReturn = 6f;
 
+    [Header("Hit Shake")]
+    public float shakeAmp = 0.35f;
+    public float shakeDur = 0.28f;
+    private float shakeTimer;
+
+    public void Shake() { shakeTimer = shakeDur; }
+
     private float currentTilt;
     private float rollImpulse;
     private float fovOffset;
@@ -38,6 +45,13 @@ public class CameraFollow : MonoBehaviour
         // follow
         Vector3 desired = target.position + offset;
         transform.position = Vector3.Lerp(transform.position, desired, smooth * Time.deltaTime);
+
+        if (shakeTimer > 0f)
+        {
+            shakeTimer -= Time.deltaTime;
+            float a = shakeAmp * Mathf.Clamp01(shakeTimer / shakeDur);
+            transform.position += new Vector3(Random.Range(-a, a), Random.Range(-a, a), 0f);
+        }
 
         // tilt based on player x
         float laneMaxX = laneOffset * (Mathf.Max(2, laneCount) - 1) * 0.5f;

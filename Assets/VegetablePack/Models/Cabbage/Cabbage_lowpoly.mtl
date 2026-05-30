@@ -1,0 +1,12 @@
+# Blender MTL File: 'Cabbage_lowpoly.blend'
+# Material Count: 1
+
+newmtl Default_OBJ
+Ns 335.436188
+Ka 1.000000 1.000000 1.000000
+Kd 0.331608 0.517339 0.160605
+Ks 0.190608 0.190608 0.190608
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2

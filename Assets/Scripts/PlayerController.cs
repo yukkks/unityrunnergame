@@ -31,6 +31,21 @@ public class PlayerController : MonoBehaviour
     [Tooltip("Kilograms lost when hitting an obstacle.")]
     public float weightLoss = 8f;
 
+    [Header("Lane Switch Feel")]
+    [Tooltip("Dog model to lean/hop on lane change. Auto-found from DogWeightVisual if empty.")]
+    public Transform dogModel;
+    [Tooltip("Bank angle (deg) the dog leans into a lane switch.")]
+    public float leanAngle = 16f;
+    public float leanReturn = 9f;
+    [Tooltip("Little hop height on a lane switch.")]
+    public float hopHeight = 0.2f;
+    public float hopReturn = 4.5f;
+
+    private float leanZ;
+    private float hop;
+    private Quaternion dogBaseRot;
+    private Vector3 dogBasePos;
+
     private ParticleSystem.EmissionModule thrusterEmission;
     private Material runtimeThrusterMaterial;
 
@@ -70,13 +85,13 @@ public class PlayerController : MonoBehaviour
             lane = Mathf.Clamp(lane + laneDelta, 0, maxLane);
         }
 
-        if (lane != prevLane && cameraFollow)
+        if (lane != prevLane)
         {
-            cameraFollow.OnLaneSwitch(lane - prevLane);
-        }
-        if (lane != prevLane && AudioController.Instance)
-        {
-            AudioController.Instance.PlayLaneSwitch();
+            int dir = lane - prevLane;
+            if (cameraFollow) cameraFollow.OnLaneSwitch(dir);
+            if (AudioController.Instance) AudioController.Instance.PlayLaneSwitch();
+            leanZ = -dir * leanAngle;   // bank into the turn
+            hop = 1f;                   // little hop
         }
 
         float centerIndex = (laneCount - 1) * 0.5f;
@@ -84,6 +99,17 @@ public class PlayerController : MonoBehaviour
         Vector3 pos = transform.position;
         pos.x = Mathf.Lerp(pos.x, targetX, Time.deltaTime * laneLerp);
         transform.position = pos;
+
+        // Lane-switch lean + hop on the dog model (decays back to rest).
+        if (dogModel)
+        {
+            leanZ = Mathf.Lerp(leanZ, 0f, leanReturn * Time.deltaTime);
+            hop = Mathf.MoveTowards(hop, 0f, hopReturn * Time.deltaTime);
+            dogModel.localRotation = dogBaseRot * Quaternion.Euler(0f, 0f, leanZ);
+            Vector3 lp = dogBasePos;
+            lp.y += Mathf.Sin(hop * Mathf.PI) * hopHeight;
+            dogModel.localPosition = lp;
+        }
 
         if (thruster)
         {
@@ -145,6 +171,10 @@ public class PlayerController : MonoBehaviour
 
             SpawnCrashFx();
 
+            if (AudioController.Instance) AudioController.Instance.PlayWhimper();
+            if (!cameraFollow) cameraFollow = FindObjectOfType<CameraFollow>();
+            if (cameraFollow) cameraFollow.Shake();
+
             ObjectPool.Release(other.gameObject);
         }
     }
@@ -153,6 +183,17 @@ public class PlayerController : MonoBehaviour
         int maxLane = Mathf.Max(0, laneCount - 1);
         lane = Mathf.Clamp(startLane, 0, maxLane);
         EnsureThruster();
+
+        if (!dogModel)
+        {
+            DogWeightVisual dw = GetComponent<DogWeightVisual>();
+            if (dw && dw.dogVisual) dogModel = dw.dogVisual;
+        }
+        if (dogModel)
+        {
+            dogBaseRot = dogModel.localRotation;
+            dogBasePos = dogModel.localPosition;
+        }
     }
 
     void EnsureThruster()

@@ -10,6 +10,10 @@ public class AudioController : MonoBehaviour
     public AudioClip hitClip;
     public AudioClip bgmClip;
     public AudioClip coinClip;
+    public AudioClip winClip;
+    public AudioClip loseClip;
+    public AudioClip barkClip;
+    public AudioClip whimperClip;
 
     [Header("Levels")]
     [Range(0f, 1f)]
@@ -47,12 +51,17 @@ public class AudioController : MonoBehaviour
         }
         if (!coinClip)
         {
-            coinClip = Resources.Load<AudioClip>("Audio/Coin");
+            coinClip = Resources.Load<AudioClip>("Audio/Chomp");
+            if (!coinClip) coinClip = Resources.Load<AudioClip>("Audio/Coin");
         }
         if (!hitClip)
         {
             hitClip = Resources.Load<AudioClip>("Audio/Hit");
         }
+        if (!winClip) winClip = Resources.Load<AudioClip>("Audio/Win");
+        if (!loseClip) loseClip = Resources.Load<AudioClip>("Audio/Lose");
+        if (!barkClip) barkClip = Resources.Load<AudioClip>("Audio/Bark");
+        if (!whimperClip) whimperClip = Resources.Load<AudioClip>("Audio/Whimper");
 
         engineSource = gameObject.AddComponent<AudioSource>();
         engineSource.loop = true;
@@ -112,6 +121,38 @@ public class AudioController : MonoBehaviour
         if (coinClip && sfxSource)
         {
             sfxSource.PlayOneShot(coinClip, sfxVolume * 0.7f);
+        }
+    }
+
+    public void PlayWin()
+    {
+        if (winClip && sfxSource)
+        {
+            sfxSource.PlayOneShot(winClip, sfxVolume);
+        }
+    }
+
+    public void PlayLose()
+    {
+        if (loseClip && sfxSource)
+        {
+            sfxSource.PlayOneShot(loseClip, sfxVolume);
+        }
+    }
+
+    public void PlayBark()
+    {
+        if (barkClip && sfxSource)
+        {
+            sfxSource.PlayOneShot(barkClip, sfxVolume);
+        }
+    }
+
+    public void PlayWhimper()
+    {
+        if (whimperClip && sfxSource)
+        {
+            sfxSource.PlayOneShot(whimperClip, sfxVolume);
         }
     }
 
