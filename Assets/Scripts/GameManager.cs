@@ -167,6 +167,8 @@ public class GameManager : MonoBehaviour
     private Image weightBarFill;
     private Image weightBarBg;
     private RectTransform weightBarRoot;
+    private RectTransform weightBarFillRect;
+    private const float WeightBarInset = 6f;
     private Sprite barPillSprite;
     private Image timerPill;
     private RectTransform timerPillRoot;
