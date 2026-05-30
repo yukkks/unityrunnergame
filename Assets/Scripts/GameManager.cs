@@ -175,6 +175,10 @@ public class GameManager : MonoBehaviour
     private Image gameOverAccent;
     private CanvasGroup gameOverGroup;
     private RectTransform gameOverCardRect;
+    private Image gameOverIconBadge;
+    private Image gameOverIconPaw;
+    private TMP_Text gameOverNumber;
+    private Image gameOverButtonBg;
     private float barFillDisplay;
     private float weightPunch;
     private float lastPunchWeight;
@@ -1281,63 +1285,108 @@ public class GameManager : MonoBehaviour
     void EnsureGameOverUi(Transform canvas)
     {
         if (gameOverPanel) return;
+        if (!barPillSprite) barPillSprite = CreateRoundedSprite(64, 32, 16);
+        if (pawSprite == null) pawSprite = CreatePawSprite();
 
         GameObject panel = new GameObject("GameOverPanel", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
         panel.layer = canvas.gameObject.layer;
         panel.transform.SetParent(canvas, false);
 
         RectTransform rect = panel.GetComponent<RectTransform>();
-        rect.anchorMin = new Vector2(0f, 0f);
-        rect.anchorMax = new Vector2(1f, 1f);
+        rect.anchorMin = Vector2.zero;
+        rect.anchorMax = Vector2.one;
         rect.offsetMin = Vector2.zero;
         rect.offsetMax = Vector2.zero;
 
         Image img = panel.GetComponent<Image>();
-        img.color = new Color(0.05f, 0.03f, 0.02f, 0.80f);
+        img.color = new Color(0.04f, 0.03f, 0.02f, 0.86f);
         gameOverGroup = panel.AddComponent<CanvasGroup>();
 
+        // Card (taller, to host an icon up top and a button at the bottom).
         GameObject card = new GameObject("GameOverCard", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
         card.layer = canvas.gameObject.layer;
         card.transform.SetParent(panel.transform, false);
-
         RectTransform cardRect = card.GetComponent<RectTransform>();
-        cardRect.anchorMin = new Vector2(0.5f, 0.5f);
-        cardRect.anchorMax = new Vector2(0.5f, 0.5f);
-        cardRect.pivot = new Vector2(0.5f, 0.5f);
+        cardRect.anchorMin = cardRect.anchorMax = cardRect.pivot = new Vector2(0.5f, 0.5f);
         cardRect.anchoredPosition = Vector2.zero;
-        cardRect.sizeDelta = new Vector2(700f, 360f);
+        cardRect.sizeDelta = new Vector2(720f, 560f);
         gameOverCardRect = cardRect;
-
         Image cardImg = card.GetComponent<Image>();
-        cardImg.color = new Color(0.15f, 0.10f, 0.07f, 0.98f);
+        cardImg.color = new Color(0.16f, 0.11f, 0.08f, 0.99f);
+        ApplyRoundedCard(cardImg);
 
-        gameOverTitleText = CreateUiText(card.transform, "GameOverTitle", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 120f), new Vector2(600f, 80f), gameOverFontSize, TextAlignmentOptions.Center);
+        // Circular icon badge straddling the card's top edge.
+        GameObject badge = new GameObject("GOIconBadge", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        badge.transform.SetParent(card.transform, false);
+        RectTransform badgeRt = badge.GetComponent<RectTransform>();
+        badgeRt.anchorMin = badgeRt.anchorMax = new Vector2(0.5f, 1f);
+        badgeRt.pivot = new Vector2(0.5f, 0.5f);
+        badgeRt.anchoredPosition = new Vector2(0f, 0f);
+        badgeRt.sizeDelta = new Vector2(132f, 132f);
+        gameOverIconBadge = badge.GetComponent<Image>();
+        gameOverIconBadge.raycastTarget = false;
+        gameOverIconBadge.color = uiAccentColor;
+        gameOverIconBadge.sprite = barPillSprite;
+        gameOverIconBadge.type = Image.Type.Sliced;
+
+        GameObject paw = new GameObject("GOPaw", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        paw.transform.SetParent(badge.transform, false);
+        RectTransform pawRt = paw.GetComponent<RectTransform>();
+        pawRt.anchorMin = pawRt.anchorMax = pawRt.pivot = new Vector2(0.5f, 0.5f);
+        pawRt.anchoredPosition = Vector2.zero;
+        pawRt.sizeDelta = new Vector2(78f, 78f);
+        gameOverIconPaw = paw.GetComponent<Image>();
+        gameOverIconPaw.raycastTarget = false;
+        gameOverIconPaw.color = uiShadowColor;
+        gameOverIconPaw.sprite = pawSprite;
+
+        gameOverTitleText = CreateUiText(card.transform, "GameOverTitle", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -110f), new Vector2(640f, 70f), gameOverFontSize, TextAlignmentOptions.Center);
         gameOverTitleText.text = "GAME OVER";
         StyleHudText(gameOverTitleText, TextAlignmentOptions.Center);
+        gameOverTitleText.fontStyle = FontStyles.Bold;
 
         GameObject divider = new GameObject("Divider", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
         divider.transform.SetParent(card.transform, false);
         RectTransform divRt = divider.GetComponent<RectTransform>();
-        divRt.anchorMin = new Vector2(0.5f, 0.5f);
-        divRt.anchorMax = new Vector2(0.5f, 0.5f);
+        divRt.anchorMin = divRt.anchorMax = new Vector2(0.5f, 1f);
         divRt.pivot = new Vector2(0.5f, 0.5f);
-        divRt.anchoredPosition = new Vector2(0f, 84f);
-        divRt.sizeDelta = new Vector2(120f, 5f);
+        divRt.anchoredPosition = new Vector2(0f, -168f);
+        divRt.sizeDelta = new Vector2(110f, 6f);
         gameOverAccent = divider.GetComponent<Image>();
         gameOverAccent.raycastTarget = false;
         gameOverAccent.color = uiAccentColor;
-        if (!barPillSprite) barPillSprite = CreateRoundedSprite(64, 32, 16);
-        if (barPillSprite) { gameOverAccent.sprite = barPillSprite; gameOverAccent.type = Image.Type.Sliced; }
+        gameOverAccent.sprite = barPillSprite;
+        gameOverAccent.type = Image.Type.Sliced;
 
-        gameOverScoreText = CreateUiText(card.transform, "GameOverScore", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 45f), new Vector2(620f, 90f), gameOverFontSize, TextAlignmentOptions.Center);
-        gameOverBestText = CreateUiText(card.transform, "GameOverBest", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -55f), new Vector2(600f, 50f), gameOverFontSize, TextAlignmentOptions.Center);
-        gameOverHintText = CreateUiText(card.transform, "GameOverHint", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -120f), new Vector2(600f, 60f), gameOverFontSize, TextAlignmentOptions.Center);
+        // Flavor message.
+        gameOverScoreText = CreateUiText(card.transform, "GameOverScore", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -240f), new Vector2(640f, 90f), gameOverFontSize, TextAlignmentOptions.Center);
+        StyleHudText(gameOverScoreText, TextAlignmentOptions.Center, true);
+
+        // Hero number (the final weight) — the big celebratory stat.
+        gameOverNumber = CreateUiText(card.transform, "GameOverNumber", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -360f), new Vector2(640f, 96f), 84, TextAlignmentOptions.Center);
+        StyleHudText(gameOverNumber, TextAlignmentOptions.Center);
+        gameOverNumber.fontStyle = FontStyles.Bold;
+        gameOverBestText = gameOverNumber; // keep legacy ref pointed at the number
+
+        // Restart button: a pill with centered label.
+        GameObject button = new GameObject("RestartButton", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        button.transform.SetParent(card.transform, false);
+        RectTransform btnRt = button.GetComponent<RectTransform>();
+        btnRt.anchorMin = btnRt.anchorMax = new Vector2(0.5f, 0f);
+        btnRt.pivot = new Vector2(0.5f, 0f);
+        btnRt.anchoredPosition = new Vector2(0f, 36f);
+        btnRt.sizeDelta = new Vector2(360f, 86f);
+        gameOverButtonBg = button.GetComponent<Image>();
+        gameOverButtonBg.raycastTarget = false;
+        gameOverButtonBg.color = uiAccentColor;
+        gameOverButtonBg.sprite = barPillSprite;
+        gameOverButtonBg.type = Image.Type.Sliced;
+
+        gameOverHintText = CreateUiText(button.transform, "GameOverHint", new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(360f, 86f), 34, TextAlignmentOptions.Center);
         gameOverHintText.text = "TAP TO RESTART";
-        StyleHudText(gameOverScoreText, TextAlignmentOptions.Center);
-        StyleHudText(gameOverBestText, TextAlignmentOptions.Center);
         StyleHudText(gameOverHintText, TextAlignmentOptions.Center);
-
-        ApplyRoundedCard(cardImg);
+        gameOverHintText.color = uiShadowColor; // dark text on amber pill
+        gameOverHintText.fontStyle = FontStyles.Bold;
 
         gameOverPanel = panel;
         gameOverPanel.SetActive(false);
@@ -1422,8 +1471,8 @@ public class GameManager : MonoBehaviour
     void UpdateGameOverUi()
     {
         int finalWeight = dogWeight ? Mathf.RoundToInt(dogWeight.currentWeight) : 0;
-
         Color outcomeColor = won ? uiBarFullColor : uiUrgentColor;
+
         if (gameOverTitleText)
         {
             gameOverTitleText.text = won ? winTitle : loseTitle;
@@ -1431,23 +1480,29 @@ public class GameManager : MonoBehaviour
             ApplyFont(gameOverTitleText);
         }
         if (gameOverAccent) gameOverAccent.color = outcomeColor;
+
+        // Icon badge + paw take the outcome color so win reads warm-gold,
+        // loss reads warm-red — instant read before you parse the words.
+        if (gameOverIconBadge) gameOverIconBadge.color = outcomeColor;
+        if (gameOverIconPaw) gameOverIconPaw.color = uiShadowColor;
+
         if (gameOverScoreText)
         {
             gameOverScoreText.text = won ? winMessage : loseMessage;
-            gameOverScoreText.fontSize = Mathf.RoundToInt(gameOverFontSize * 0.7f);
+            gameOverScoreText.fontSize = Mathf.RoundToInt(gameOverFontSize * 0.62f);
             ApplyFont(gameOverScoreText);
         }
-        if (gameOverBestText)
+        if (gameOverNumber)
         {
-            gameOverBestText.text = finalWeight + " kg";
-            gameOverBestText.fontSize = Mathf.RoundToInt(gameOverFontSize * 0.65f);
-            gameOverBestText.color = uiAccentColor;
-            ApplyFont(gameOverBestText);
+            gameOverNumber.text = finalWeight + " kg";
+            gameOverNumber.color = outcomeColor;
+            ApplyFont(gameOverNumber);
         }
+        if (gameOverButtonBg) gameOverButtonBg.color = outcomeColor;
         if (gameOverHintText)
         {
-            gameOverHintText.text = won ? "TAP TO PLAY AGAIN" : "TAP TO TRY AGAIN";
-            gameOverHintText.fontSize = Mathf.RoundToInt(gameOverFontSize * 0.6f);
+            gameOverHintText.text = won ? "PLAY AGAIN" : "TRY AGAIN";
+            gameOverHintText.color = uiShadowColor;
             ApplyFont(gameOverHintText);
         }
     }
