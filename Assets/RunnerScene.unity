@@ -1625,9 +1625,9 @@ MonoBehaviour:
   laneOffset: 1.6
   laneCount: 3
   spawnY: 0.8
-  spawnZ: 12
+  spawnZ: 22
   coinY: 0.9
-  coinZ: 12
+  coinZ: 22
   coinDepthOffset: 4
   startMinInterval: 0.9
   startMaxInterval: 1.4
@@ -53640,9 +53640,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0857900d398e04585ade8cbb979eeaee, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameManager
-  startSpeed: 13
-  maxSpeed: 28
-  speedRamp: 0.4
+  startSpeed: 17
+  maxSpeed: 40
+  speedRamp: 0.7
   scoreText: {fileID: 854551781}
   bestScoreText: {fileID: 0}
   distanceText: {fileID: 0}
@@ -53681,7 +53681,7 @@ MonoBehaviour:
   supabaseUrl: https://axbzrtuvdwddixhbpdiz.supabase.co
   supabaseAnonKey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF4YnpydHV2ZHdkZGl4aGJwZGl6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5NTUwMzIsImV4cCI6MjA4ODUzMTAzMn0.BpuxVSfS2D9BxHM1vF6loDIANVPgSpxZT5mPXxvCreM
   supabaseTable: scores
-  gameId: scifirunner
+  gameId: MissionKenzo
   globalBestText: {fileID: 0}
   enablePostProcessing: 1
   bloomIntensity: 1.1
