@@ -1117,8 +1117,8 @@ public class GameManager : MonoBehaviour
         weightBarRoot.anchorMin = new Vector2(0.5f, 1f);
         weightBarRoot.anchorMax = new Vector2(0.5f, 1f);
         weightBarRoot.pivot = new Vector2(0.5f, 1f);
-        weightBarRoot.anchoredPosition = new Vector2(0f, -184f);
-        weightBarRoot.sizeDelta = new Vector2(560f, 42f);
+        weightBarRoot.anchoredPosition = new Vector2(0f, -70f);
+        weightBarRoot.sizeDelta = new Vector2(640f, 58f);
 
         GameObject track = new GameObject("Track", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
         track.transform.SetParent(root.transform, false);
@@ -1132,21 +1132,21 @@ public class GameManager : MonoBehaviour
         weightBarBg.color = uiBarTrackColor;
         if (barPillSprite) { weightBarBg.sprite = barPillSprite; weightBarBg.type = Image.Type.Sliced; }
 
+        // Fill is a left-anchored rounded pill whose WIDTH animates (in
+        // UpdateGoalUi). A sliced sprite + width keeps clean rounded ends —
+        // no distorted wedge tip like Image.Type.Filled produced.
         GameObject fill = new GameObject("Fill", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
         fill.transform.SetParent(root.transform, false);
-        RectTransform fillRt = fill.GetComponent<RectTransform>();
-        fillRt.anchorMin = Vector2.zero;
-        fillRt.anchorMax = Vector2.one;
-        fillRt.offsetMin = new Vector2(3f, 3f);
-        fillRt.offsetMax = new Vector2(-3f, -3f);
+        weightBarFillRect = fill.GetComponent<RectTransform>();
+        weightBarFillRect.anchorMin = new Vector2(0f, 0.5f);
+        weightBarFillRect.anchorMax = new Vector2(0f, 0.5f);
+        weightBarFillRect.pivot = new Vector2(0f, 0.5f);
+        weightBarFillRect.anchoredPosition = new Vector2(WeightBarInset, 0f);
+        weightBarFillRect.sizeDelta = new Vector2(0f, weightBarRoot.sizeDelta.y - 2f * WeightBarInset);
         weightBarFill = fill.GetComponent<Image>();
         weightBarFill.raycastTarget = false;
-        weightBarFill.color = uiAccentColor;
-        if (barPillSprite) weightBarFill.sprite = barPillSprite;
-        weightBarFill.type = Image.Type.Filled;
-        weightBarFill.fillMethod = Image.FillMethod.Horizontal;
-        weightBarFill.fillOrigin = (int)Image.OriginHorizontal.Left;
-        weightBarFill.fillAmount = 0f;
+        weightBarFill.color = uiBarLowColor;
+        if (barPillSprite) { weightBarFill.sprite = barPillSprite; weightBarFill.type = Image.Type.Sliced; }
     }
 
     void ApplyRoundedCard(Image img)
