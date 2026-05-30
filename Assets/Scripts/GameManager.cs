@@ -442,15 +442,32 @@ public class GameManager : MonoBehaviour
         if (weightText)
         {
             weightText.text = Mathf.RoundToInt(cur) + " / " + Mathf.RoundToInt(winWeightKg) + " kg";
-            weightText.color = uiAccentColor;
+            weightText.color = uiTextColor;
             weightText.rectTransform.localScale = Vector3.one * (1f + 0.22f * weightPunch);
         }
-        if (weightBarFill)
+        if (weightBarFill && weightBarFillRect && weightBarRoot)
         {
             float targetT = Mathf.Clamp01(Mathf.InverseLerp(barFloorKg, winWeightKg, cur));
             barFillDisplay = Mathf.Lerp(barFillDisplay, targetT, Time.deltaTime * 6f);
-            weightBarFill.fillAmount = barFillDisplay;
-            weightBarFill.color = Color.Lerp(uiBarLowColor, uiBarFullColor, barFillDisplay);
+
+            // Animate WIDTH (not fillAmount) so rounded ends stay clean. Keep a
+            // minimum so an empty-ish bar still reads as a rounded nub, not a sliver.
+            float innerW = weightBarRoot.rect.width - 2f * WeightBarInset;
+            float fillH = weightBarRoot.rect.height - 2f * WeightBarInset;
+            float w = Mathf.Lerp(fillH, innerW, barFillDisplay); // fillH == pill cap diameter
+            weightBarFillRect.sizeDelta = new Vector2(w, fillH);
+
+            // Soft pulse on the whole bar when a treat lands (juice).
+            weightBarRoot.localScale = Vector3.one * (1f + 0.05f * weightPunch);
+
+            // Green -> gold as it approaches the goal; flare brighter near full.
+            Color baseCol = Color.Lerp(uiBarLowColor, uiBarFullColor, barFillDisplay);
+            if (barFillDisplay > 0.85f)
+            {
+                float flare = (barFillDisplay - 0.85f) / 0.15f;
+                baseCol = Color.Lerp(baseCol, Color.white, 0.25f * flare * (0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 8f)));
+            }
+            weightBarFill.color = baseCol;
         }
     }
 
@@ -526,9 +543,24 @@ public class GameManager : MonoBehaviour
         {
             weightText = CreateUiText(hudParent, "WeightText", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -140f), new Vector2(540f, 42f), 30, TextAlignmentOptions.Top);
         }
-        StyleHudText(weightText, TextAlignmentOptions.Top);
 
         EnsureWeightBar(hudParent);
+
+        // Center the kg readout INSIDE the bar (mobile-game convention) so the
+        // number and the progress it represents read as one element.
+        {
+            weightText.transform.SetParent(weightBarRoot, false);
+            RectTransform wt = weightText.rectTransform;
+            wt.anchorMin = Vector2.zero;
+            wt.anchorMax = Vector2.one;
+            wt.offsetMin = Vector2.zero;
+            wt.offsetMax = Vector2.zero;
+            weightText.fontSize = 30;
+            weightText.fontStyle = FontStyles.Bold;
+            weightText.transform.SetAsLastSibling(); // above the fill
+        }
+        StyleHudText(weightText, TextAlignmentOptions.Center);
+        weightText.fontStyle = FontStyles.Bold;
 
         if (!startPromptText)
         {
@@ -1044,14 +1076,24 @@ public class GameManager : MonoBehaviour
         if (timerPill || !timerText) return;
         if (!barPillSprite) barPillSprite = CreateRoundedSprite(64, 32, 16);
 
+        // Secondary element: a compact pill tucked into the top-right corner so
+        // the weight bar can own the center as the hero element.
+        RectTransform timerRt = timerText.rectTransform;
+        timerRt.anchorMin = new Vector2(1f, 1f);
+        timerRt.anchorMax = new Vector2(1f, 1f);
+        timerRt.pivot = new Vector2(1f, 1f);
+        timerRt.anchoredPosition = new Vector2(-26f, -26f);
+        timerRt.sizeDelta = new Vector2(132f, 64f);
+        timerText.fontSize = 40;
+
         GameObject pill = new GameObject("TimerPill", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
         pill.transform.SetParent(timerText.transform.parent, false);
         timerPillRoot = pill.GetComponent<RectTransform>();
-        timerPillRoot.anchorMin = new Vector2(0.5f, 1f);
-        timerPillRoot.anchorMax = new Vector2(0.5f, 1f);
-        timerPillRoot.pivot = new Vector2(0.5f, 1f);
-        timerPillRoot.anchoredPosition = new Vector2(0f, -37f);
-        timerPillRoot.sizeDelta = new Vector2(200f, 96f);
+        timerPillRoot.anchorMin = new Vector2(1f, 1f);
+        timerPillRoot.anchorMax = new Vector2(1f, 1f);
+        timerPillRoot.pivot = new Vector2(1f, 1f);
+        timerPillRoot.anchoredPosition = new Vector2(-20f, -20f);
+        timerPillRoot.sizeDelta = new Vector2(144f, 76f);
 
         timerPill = pill.GetComponent<Image>();
         timerPill.raycastTarget = false;
