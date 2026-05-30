@@ -1626,7 +1626,7 @@ MonoBehaviour:
   laneCount: 3
   spawnY: 0.8
   spawnZ: 28
-  coinY: 0.9
+  coinY: 0.68
   coinZ: 28
   coinDepthOffset: 4
   startMinInterval: 0.5
