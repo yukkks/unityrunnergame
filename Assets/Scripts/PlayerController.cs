@@ -287,7 +287,9 @@ public class PlayerController : MonoBehaviour
         renderer.material = runtimeThrusterMaterial;
     }
 
-    void SpawnCrashFx()
+    private static Material crashFxMaterial;
+
+    void SpawnCrashFx(Color splatColor)
     {
         if (crashFxPrefab)
         {
@@ -297,27 +299,83 @@ public class PlayerController : MonoBehaviour
             return;
         }
 
+        // Material loaded from Resources (a committed .mat using URP/Lit) so the
+        // shader survives the WebGL build — runtime Shader.Find for particle
+        // shaders returns null in builds and renders magenta/pink.
+        if (crashFxMaterial == null) crashFxMaterial = Resources.Load<Material>("CrashFx");
+
         GameObject fxObj = new GameObject("CrashFx");
-        fxObj.transform.position = transform.position;
-        ParticleSystem ps = fxObj.AddComponent<ParticleSystem>();
-        var main = ps.main;
-        main.loop = false;
-        main.duration = 0.6f;
-        main.startLifetime = 0.5f;
-        main.startSpeed = 2.6f;
-        main.startSize = 0.28f;
-        main.startColor = new Color(1f, 0.55f, 0.1f, 1f);
+        fxObj.transform.position = transform.position + Vector3.up * 0.5f;
 
-        var emission = ps.emission;
-        emission.rateOverTime = 0f;
-        emission.SetBursts(new ParticleSystem.Burst[] { new ParticleSystem.Burst(0f, 28) });
+        // 1) Chunky veggie bits — burst outward and fall under gravity.
+        ParticleSystem chunks = fxObj.AddComponent<ParticleSystem>();
+        var cMain = chunks.main;
+        cMain.loop = false;
+        cMain.duration = 0.5f;
+        cMain.startLifetime = new ParticleSystem.MinMaxCurve(0.45f, 0.75f);
+        cMain.startSpeed = new ParticleSystem.MinMaxCurve(2.5f, 5f);
+        cMain.startSize = new ParticleSystem.MinMaxCurve(0.12f, 0.26f);
+        cMain.startRotation = new ParticleSystem.MinMaxCurve(0f, 6.28f);
+        cMain.gravityModifier = 2.2f;
+        cMain.startColor = SplatGradient(splatColor);
+        cMain.playOnAwake = false;
+        var cEmit = chunks.emission;
+        cEmit.rateOverTime = 0f;
+        cEmit.SetBursts(new[] { new ParticleSystem.Burst(0f, 14) });
+        var cShape = chunks.shape;
+        cShape.enabled = true;
+        cShape.shapeType = ParticleSystemShapeType.Sphere;
+        cShape.radius = 0.15f;
+        SetFxMaterial(chunks, ParticleSystemRenderMode.Mesh);
 
-        var shape = ps.shape;
-        shape.enabled = true;
-        shape.shapeType = ParticleSystemShapeType.Sphere;
-        shape.radius = 0.2f;
+        // 2) Soft pale puff — a quick cartoon "poof".
+        GameObject puffObj = new GameObject("CrashPuff");
+        puffObj.transform.SetParent(fxObj.transform, false);
+        ParticleSystem puff = puffObj.AddComponent<ParticleSystem>();
+        var pMain = puff.main;
+        pMain.loop = false;
+        pMain.duration = 0.4f;
+        pMain.startLifetime = 0.35f;
+        pMain.startSpeed = new ParticleSystem.MinMaxCurve(0.6f, 1.4f);
+        pMain.startSize = new ParticleSystem.MinMaxCurve(0.4f, 0.7f);
+        pMain.startColor = new Color(1f, 0.97f, 0.9f, 0.85f);
+        pMain.playOnAwake = false;
+        var pEmit = puff.emission;
+        pEmit.rateOverTime = 0f;
+        pEmit.SetBursts(new[] { new ParticleSystem.Burst(0f, 8) });
+        var pShape = puff.shape;
+        pShape.enabled = true;
+        pShape.shapeType = ParticleSystemShapeType.Sphere;
+        pShape.radius = 0.2f;
+        var pSol = puff.sizeOverLifetime;
+        pSol.enabled = true;
+        pSol.size = new ParticleSystem.MinMaxCurve(1f, new AnimationCurve(
+            new Keyframe(0f, 0.6f), new Keyframe(0.3f, 1f), new Keyframe(1f, 0f)));
+        SetFxMaterial(puff, ParticleSystemRenderMode.Billboard);
 
-        ps.Play();
+        chunks.Play();
+        puff.Play();
         Destroy(fxObj, 2f);
+    }
+
+    ParticleSystem.MinMaxGradient SplatGradient(Color baseColor)
+    {
+        Color light = Color.Lerp(baseColor, Color.white, 0.35f);
+        Color dark = Color.Lerp(baseColor, Color.black, 0.25f);
+        return new ParticleSystem.MinMaxGradient(dark, light);
+    }
+
+    void SetFxMaterial(ParticleSystem ps, ParticleSystemRenderMode mode)
+    {
+        var r = ps.GetComponent<ParticleSystemRenderer>();
+        if (!r) return;
+        r.renderMode = mode;
+        if (mode == ParticleSystemRenderMode.Mesh)
+        {
+            var cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            r.mesh = cube.GetComponent<MeshFilter>().sharedMesh;
+            Destroy(cube);
+        }
+        if (crashFxMaterial) r.material = crashFxMaterial;
     }
 }
