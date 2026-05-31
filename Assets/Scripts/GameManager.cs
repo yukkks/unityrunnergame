@@ -375,6 +375,11 @@ public class GameManager : MonoBehaviour
         EndGame(false);
     }
 
+#if UNITY_WEBGL && !UNITY_EDITOR
+    [System.Runtime.InteropServices.DllImport("__Internal")]
+    private static extern void NotifyGameResult(string result);
+#endif
+
     public void EndGame(bool victory)
     {
         if (State != GameState.Running) return;
@@ -382,18 +387,37 @@ public class GameManager : MonoBehaviour
         CommitBestScore();
         TrySubmitGlobalBest();
         UpdateUi();
-        UpdateGameOverUi();
         SetState(GameState.GameOver);
-        if (gameOverPanel && gameOverPanel.activeInHierarchy)
-        {
-            StartCoroutine(AnimateGameOverIn());
-            if (victory) StartCoroutine(PlayConfetti());
-        }
+
+        // The website owns the ending: tell the host page win/lose so it can
+        // play the outro video. The in-game card is suppressed in WebGL builds.
+        NotifyHost(victory ? "win" : "lose");
+
         if (audioController)
         {
             if (victory) audioController.PlayWin();
             else audioController.PlayLose();
         }
+    }
+
+    void NotifyHost(string result)
+    {
+#if UNITY_WEBGL && !UNITY_EDITOR
+        try { NotifyGameResult(result); } catch { }
+#else
+        Debug.Log("[GameResult] " + result);
+        // In the editor, still show the card so we can test outcomes locally.
+        UpdateGameOverUi();
+        if (gameOverPanel)
+        {
+            gameOverPanel.SetActive(true);
+            if (gameOverPanel.activeInHierarchy)
+            {
+                StartCoroutine(AnimateGameOverIn());
+                if (result == "win") StartCoroutine(PlayConfetti());
+            }
+        }
+#endif
     }
 
     void CommitBestScore()
