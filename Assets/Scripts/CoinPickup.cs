@@ -17,6 +17,7 @@ public class CoinPickup : MonoBehaviour
     private bool picked;
     private Renderer cachedRenderer;
     private MeshFilter cachedMeshFilter;
+    private static CameraFollow cachedCamera;
     private MaterialPropertyBlock block;
     private string colorProp;
     private Color baseColor = Color.white;
@@ -94,84 +95,43 @@ public class CoinPickup : MonoBehaviour
         Collider col = GetComponent<Collider>();
         if (col) col.enabled = false;
 
-        StartCoroutine(PlayPickupSplit());
+        // Eat juice: a quick camera kick so the bite has impact. (The dog also
+        // grows via GainWeight and the weight bar pulses in GameManager.)
+        if (cachedCamera == null) cachedCamera = FindObjectOfType<CameraFollow>();
+        if (cachedCamera) cachedCamera.Shake(0.12f, 0.14f);
+
+        StartCoroutine(PlayPickupPop());
     }
-    System.Collections.IEnumerator PlayPickupSplit()
+
+    // A snappy "chomp pop": the treat punches up in scale, then squashes to
+    // nothing while lifting and fading. Reads well for any mesh (the old
+    // coin-split was built for a flat coin and looked wrong on the steak).
+    System.Collections.IEnumerator PlayPickupPop()
     {
         Vector3 startScale = transform.localScale;
         Vector3 startPos = transform.position;
-        Quaternion startRot = transform.rotation;
-
-        if (!cachedMeshFilter || !cachedRenderer || cachedMeshFilter.sharedMesh == null)
-        {
-            // Fallback: simple float + fade
-            float t0 = 0f;
-            while (t0 < pickupDuration)
-            {
-                float p0 = t0 / pickupDuration;
-                float ease0 = 1f - Mathf.Pow(1f - p0, 3f);
-                transform.position = startPos + Vector3.up * (pickupFloat * ease0);
-                ApplyFade(cachedRenderer, p0);
-                t0 += Time.deltaTime;
-                yield return null;
-            }
-            ObjectPool.Release(gameObject);
-            yield break;
-        }
-
-        cachedRenderer.enabled = false;
-
-        Mesh mesh = cachedMeshFilter.sharedMesh;
-        Material mat = cachedRenderer.sharedMaterial;
-        Vector3 halfScale = new Vector3(startScale.x * 0.5f, startScale.y, startScale.z);
-        Vector3 rightDir = transform.right;
-
-        Renderer left = CreateHalf("CoinHalf_L", mesh, mat, startPos, startRot, halfScale);
-        Renderer right = CreateHalf("CoinHalf_R", mesh, mat, startPos, startRot, halfScale);
-
+        float dur = Mathf.Max(0.12f, pickupDuration);
         float t = 0f;
-        while (t < pickupDuration)
+        while (t < dur)
         {
-            float p = t / pickupDuration;
+            float p = t / dur;
+            // Scale: quick overshoot to ~1.35x in the first 25%, then down to 0.
+            float s = p < 0.25f
+                ? Mathf.Lerp(1f, 1.35f, p / 0.25f)
+                : Mathf.Lerp(1.35f, 0f, (p - 0.25f) / 0.75f);
+            transform.localScale = startScale * s;
+
             float ease = 1f - Mathf.Pow(1f - p, 3f);
-
-            Vector3 lift = Vector3.up * (pickupFloat * ease);
-            Vector3 offset = rightDir * (splitDistance * ease);
-
-            if (left)
-            {
-                left.transform.position = startPos - offset + lift;
-                left.transform.rotation = startRot * Quaternion.Euler(0f, 0f, -splitRotate * p);
-                ApplyFade(left, p);
-            }
-            if (right)
-            {
-                right.transform.position = startPos + offset + lift;
-                right.transform.rotation = startRot * Quaternion.Euler(0f, 0f, splitRotate * p);
-                ApplyFade(right, p);
-            }
+            transform.position = startPos + Vector3.up * (pickupFloat * ease);
+            transform.Rotate(Vector3.up, 540f * Time.deltaTime, Space.World);
+            ApplyFade(cachedRenderer, p);
 
             t += Time.deltaTime;
             yield return null;
         }
 
-        if (left) Destroy(left.gameObject);
-        if (right) Destroy(right.gameObject);
+        transform.localScale = startScale; // restore for the pool
         ObjectPool.Release(gameObject);
-    }
-
-    Renderer CreateHalf(string name, Mesh mesh, Material mat, Vector3 pos, Quaternion rot, Vector3 scale)
-    {
-        GameObject obj = new GameObject(name);
-        obj.transform.position = pos;
-        obj.transform.rotation = rot;
-        obj.transform.localScale = scale;
-
-        MeshFilter mf = obj.AddComponent<MeshFilter>();
-        mf.sharedMesh = mesh;
-        MeshRenderer mr = obj.AddComponent<MeshRenderer>();
-        mr.sharedMaterial = mat;
-        return mr;
     }
 
     void ApplyFade(Renderer renderer, float t)
