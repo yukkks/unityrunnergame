@@ -3,6 +3,8 @@ using UnityEngine;
 public class Spawner : MonoBehaviour
 {
     public GameObject obstaclePrefab;
+    [Tooltip("Optional second obstacle type; when set, each spawn randomly picks between the two for visual variety.")]
+    public GameObject obstaclePrefab2;
     public GameObject coinPrefab;
     public float laneOffset = 1.2f;
     [Range(2, 5)]
@@ -112,7 +114,9 @@ public class Spawner : MonoBehaviour
         float x = LaneToX(obstacleLane);
         Vector3 pos = new Vector3(x, spawnY, spawnZ);
 
-        ObjectPool.Get(obstaclePrefab, pos, Quaternion.identity);
+        GameObject chosen = obstaclePrefab;
+        if (obstaclePrefab2 && Random.value < 0.5f) chosen = obstaclePrefab2;
+        ObjectPool.Get(chosen, pos, Quaternion.identity);
 
         if (ShouldSpawnCoin(obstacleLane))
         {
