@@ -119,6 +119,8 @@ public class GameManager : MonoBehaviour
     public Light keyLight;
     [Range(0f, 5f)]
     public float keyLightIntensity = 1.35f;
+    [Range(0f, 1f)]
+    public float keyLightShadowStrength = 0.35f;
     public Color keyLightColor = new Color(0.95f, 0.97f, 1f, 1f);
     public bool autoCreateRimLight = true;
     public Color rimLightColor = new Color(0.35f, 0.7f, 1f, 1f);
@@ -841,6 +843,10 @@ public class GameManager : MonoBehaviour
         {
             keyLight.intensity = keyLightIntensity;
             keyLight.color = keyLightColor;
+            // Soften harsh building shadows so food on the shadowed side stays
+            // readable (was full-strength, hiding treats).
+            keyLight.shadows = LightShadows.Soft;
+            keyLight.shadowStrength = keyLightShadowStrength;
         }
 
         if (autoCreateRimLight && !GameObject.Find("RimLight"))
