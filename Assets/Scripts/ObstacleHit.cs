@@ -22,7 +22,17 @@ public class ObstacleHit : MonoBehaviour
         if (!player) return;
 
         hit = true;
-        player.HitByObstacle();
+
+        // Tint the splat with this obstacle's color (onion = pale, eggplant =
+        // purple) so the effect reads as that veggie bursting.
+        Color splat = new Color(0.55f, 0.75f, 0.35f);
+        Renderer rend = GetComponentInChildren<Renderer>();
+        if (rend && rend.sharedMaterial)
+        {
+            if (rend.sharedMaterial.HasProperty("_BaseColor")) splat = rend.sharedMaterial.GetColor("_BaseColor");
+            else if (rend.sharedMaterial.HasProperty("_Color")) splat = rend.sharedMaterial.color;
+        }
+        player.HitByObstacle(splat);
 
         ObjectPool.Release(gameObject);
     }

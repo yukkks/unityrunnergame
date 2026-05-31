@@ -163,6 +163,12 @@ public class PlayerController : MonoBehaviour
     // pickups). The obstacle handles its own despawn.
     public void HitByObstacle()
     {
+        // Default splat color if the obstacle didn't pass one.
+        HitByObstacle(new Color(0.55f, 0.75f, 0.35f));
+    }
+
+    public void HitByObstacle(Color splatColor)
+    {
         DogWeightVisual dogWeight = GetComponent<DogWeightVisual>();
 
         if (dogWeight)
@@ -170,7 +176,7 @@ public class PlayerController : MonoBehaviour
             dogWeight.LoseWeight(weightLoss);
         }
 
-        SpawnCrashFx();
+        SpawnCrashFx(splatColor);
 
         if (AudioController.Instance) AudioController.Instance.PlayWhimper();
         if (!cameraFollow) cameraFollow = FindObjectOfType<CameraFollow>();
