@@ -98,7 +98,7 @@ public class CoinPickup : MonoBehaviour
         // Eat juice: a quick camera kick so the bite has impact. (The dog also
         // grows via GainWeight and the weight bar pulses in GameManager.)
         if (cachedCamera == null) cachedCamera = FindObjectOfType<CameraFollow>();
-        if (cachedCamera) cachedCamera.Shake(0.12f, 0.14f);
+        if (cachedCamera) cachedCamera.Shake();
 
         StartCoroutine(PlayPickupPop());
     }
