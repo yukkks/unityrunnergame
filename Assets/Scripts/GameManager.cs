@@ -179,6 +179,7 @@ public class GameManager : MonoBehaviour
     private RectTransform gameOverCardRect;
     private Image gameOverIconBadge;
     private Image gameOverIconPaw;
+    private RawImage gameOverWinImage;
     private TMP_Text gameOverNumber;
     private Image gameOverButtonBg;
     private float barFillDisplay;
@@ -1361,6 +1362,21 @@ public class GameManager : MonoBehaviour
         gameOverIconPaw.color = uiShadowColor;
         gameOverIconPaw.sprite = pawSprite;
 
+        // Win-only celebration image (woman lifting the too-chubby dog as the
+        // plane leaves). Shown on win, hidden on loss; rounded to match the card.
+        GameObject winImg = new GameObject("GOWinImage", typeof(RectTransform), typeof(CanvasRenderer), typeof(RawImage));
+        winImg.transform.SetParent(card.transform, false);
+        RectTransform wiRt = winImg.GetComponent<RectTransform>();
+        wiRt.anchorMin = new Vector2(0.5f, 1f);
+        wiRt.anchorMax = new Vector2(0.5f, 1f);
+        wiRt.pivot = new Vector2(0.5f, 1f);
+        wiRt.anchoredPosition = new Vector2(0f, -150f);
+        wiRt.sizeDelta = new Vector2(560f, 300f);
+        gameOverWinImage = winImg.GetComponent<RawImage>();
+        gameOverWinImage.raycastTarget = false;
+        gameOverWinImage.texture = Resources.Load<Texture2D>("win_scene");
+        winImg.SetActive(false);
+
         gameOverTitleText = CreateUiText(card.transform, "GameOverTitle", new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -110f), new Vector2(640f, 70f), gameOverFontSize, TextAlignmentOptions.Center);
         gameOverTitleText.text = "GAME OVER";
         StyleHudText(gameOverTitleText, TextAlignmentOptions.Center);
@@ -1526,6 +1542,14 @@ public class GameManager : MonoBehaviour
             gameOverHintText.color = uiShadowColor;
             ApplyFont(gameOverHintText);
         }
+
+        // On a win, the celebration image takes over the card's middle: show it,
+        // hide the paw badge + flavor message so they don't overlap. The title
+        // and the final-weight number still read above/below it.
+        bool showWin = won && gameOverWinImage && gameOverWinImage.texture;
+        if (gameOverWinImage) gameOverWinImage.gameObject.SetActive(showWin);
+        if (gameOverIconBadge) gameOverIconBadge.gameObject.SetActive(!showWin);
+        if (gameOverScoreText) gameOverScoreText.gameObject.SetActive(!showWin);
     }
 
     void StartRun()
