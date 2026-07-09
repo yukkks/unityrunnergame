@@ -225,6 +225,7 @@ public class GameManager : MonoBehaviour
     {
         SetState(GameState.Waiting);
         UpdateUi();
+        NotifyHostReady();
         if (HasSupabaseConfig())
         {
             StartCoroutine(FetchGlobalBest());
@@ -392,7 +393,20 @@ public class GameManager : MonoBehaviour
 #if UNITY_WEBGL && !UNITY_EDITOR
     [System.Runtime.InteropServices.DllImport("__Internal")]
     private static extern void NotifyGameResult(string result);
+    [System.Runtime.InteropServices.DllImport("__Internal")]
+    private static extern void NotifyGameReady();
 #endif
+
+    // Tell the host page the game is interactive so it can lift its loading
+    // veil at the right moment (the iframe 'load' event fires far too early).
+    void NotifyHostReady()
+    {
+#if UNITY_WEBGL && !UNITY_EDITOR
+        try { NotifyGameReady(); } catch { }
+#else
+        Debug.Log("[GameReady]");
+#endif
+    }
 
     public void EndGame(bool victory)
     {
@@ -411,6 +425,11 @@ public class GameManager : MonoBehaviour
         {
             if (victory) audioController.PlayWin();
             else audioController.PlayLose();
+#if UNITY_WEBGL && !UNITY_EDITOR
+            // The website's outro video owns the soundtrack from here — let the
+            // short stinger ring out but stop the music bed underneath it.
+            audioController.SetBgmEnabled(false);
+#endif
         }
     }
 
