@@ -39,6 +39,8 @@ public class GameManager : MonoBehaviour
     public TMP_Text gameOverBestText;
     public TMP_Text gameOverHintText;
     public TMP_FontAsset uiFont;
+    [Tooltip("Serif display font (Fraunces) for card titles and verdict moments; matches the website. Body/HUD text stays on uiFont.")]
+    public TMP_FontAsset uiDisplayFont;
 
     [Header("Farewell Goal")]
     [Tooltip("Seconds until mom's flight boards.")]
@@ -990,6 +992,13 @@ public class GameManager : MonoBehaviour
         text.font = uiFont;
     }
 
+    // Serif display font for card titles / verdicts (falls back to uiFont).
+    void ApplyDisplayFont(TMP_Text text)
+    {
+        if (!text) return;
+        text.font = uiDisplayFont ? uiDisplayFont : uiFont;
+    }
+
     void EnsureLighting()
     {
         if (!keyLight)
@@ -1497,9 +1506,9 @@ public class GameManager : MonoBehaviour
         return Sprite.Create(tex, new Rect(0, 0, width, height), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, border);
     }
 
-    // A cream "HOW TO PLAY" card on a dimmed backdrop, shown while Waiting.
-    // Explains the goal/treats/onions/controls and ends in an amber TAP TO START
-    // pill (the existing startPromptText, reparented in as the label).
+    // The "How to Play" card, shown while Waiting. Cinematic treatment matching
+    // the landing page: dark ink card, small-caps eyebrow, serif (Fraunces)
+    // title, hairline gold rule, cream body with gold keywords, gold CTA.
     void EnsureRulesCard(RectTransform parent)
     {
         if (!parent) return;
@@ -1512,13 +1521,13 @@ public class GameManager : MonoBehaviour
         if (!roundedCardSprite) roundedCardSprite = CreateRoundedSprite(96, 96, 40);
         if (!barPillSprite) barPillSprite = CreateRoundedSprite(64, 32, 16);
 
-        // Warm ink + accent tuned for the cream card (the HUD's cream text colors
-        // would be invisible here).
-        Color ink = new Color(0.26f, 0.17f, 0.10f, 1f);
-        Color accent = new Color(0.85f, 0.49f, 0.12f, 1f);
-        string accentHex = ColorUtility.ToHtmlStringRGB(accent);
-        string a0 = "<color=#" + accentHex + "><b>";
-        string a1 = "</b></color>";
+        // Website palette: ink card, cream/taupe text, ember-gold accent.
+        Color cream = new Color(0.957f, 0.906f, 0.827f, 1f);   // #f4e7d3
+        Color creamDim = new Color(0.957f, 0.906f, 0.827f, 0.62f);
+        Color taupe = new Color(0.851f, 0.776f, 0.663f, 1f);   // #d9c6a9
+        Color goldHi = new Color(0.886f, 0.663f, 0.306f, 1f);  // #e2a94e
+        string a0 = "<color=#" + ColorUtility.ToHtmlStringRGB(goldHi) + ">";
+        string a1 = "</color>";
 
         // Full-screen dim backdrop
         GameObject root = new GameObject("RulesOverlay", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
@@ -1533,7 +1542,7 @@ public class GameManager : MonoBehaviour
         dim.color = new Color(0.04f, 0.03f, 0.02f, 0.6f);
         dim.raycastTarget = false;
 
-        // Cream card
+        // Ink card
         GameObject card = new GameObject("RulesCard", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
         card.layer = parent.gameObject.layer;
         card.transform.SetParent(rulesRoot, false);
@@ -1542,23 +1551,32 @@ public class GameManager : MonoBehaviour
         cardRt.anchorMax = new Vector2(0.5f, 0.5f);
         cardRt.pivot = new Vector2(0.5f, 0.5f);
         cardRt.anchoredPosition = new Vector2(0f, 60f);
-        cardRt.sizeDelta = new Vector2(900f, 1040f);
+        cardRt.sizeDelta = new Vector2(900f, 1080f);
         Image cardImg = card.GetComponent<Image>();
         cardImg.sprite = roundedCardSprite;
         cardImg.type = Image.Type.Sliced;
-        cardImg.color = new Color(0.97f, 0.93f, 0.85f, 1f);
+        cardImg.color = new Color(0.122f, 0.094f, 0.075f, 0.99f); // #1f1813
         cardImg.raycastTarget = false;
 
-        // Title
+        // Small-caps eyebrow above the title (film-credit voice).
+        TMP_Text eyebrow = CreateUiText(cardRt, "RulesEyebrow",
+            new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+            new Vector2(0f, -66f), new Vector2(820f, 50f), 30, TextAlignmentOptions.Center);
+        eyebrow.text = "ONE MORE WALK";
+        eyebrow.characterSpacing = 22f;
+        eyebrow.color = creamDim;
+        ApplyFont(eyebrow);
+
+        // Serif title, title-case — the website's display voice.
         TMP_Text title = CreateUiText(cardRt, "RulesTitle",
             new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
-            new Vector2(0f, -80f), new Vector2(820f, 120f), 78, TextAlignmentOptions.Center);
-        title.text = "HOW TO PLAY";
-        title.fontStyle = FontStyles.Bold;
-        title.color = ink;
+            new Vector2(0f, -112f), new Vector2(820f, 120f), 82, TextAlignmentOptions.Center);
+        title.text = "How to Play";
+        title.color = cream;
         title.enableWordWrapping = false;
+        ApplyDisplayFont(title);
 
-        // Amber divider under the title
+        // Hairline gold rule under the title
         GameObject div = new GameObject("RulesDivider", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
         div.layer = parent.gameObject.layer;
         div.transform.SetParent(cardRt, false);
@@ -1566,28 +1584,30 @@ public class GameManager : MonoBehaviour
         divRt.anchorMin = new Vector2(0.5f, 1f);
         divRt.anchorMax = new Vector2(0.5f, 1f);
         divRt.pivot = new Vector2(0.5f, 1f);
-        divRt.anchoredPosition = new Vector2(0f, -200f);
-        divRt.sizeDelta = new Vector2(380f, 9f);
+        divRt.anchoredPosition = new Vector2(0f, -248f);
+        divRt.sizeDelta = new Vector2(90f, 3f);
         Image divImg = div.GetComponent<Image>();
         divImg.sprite = barPillSprite;
         divImg.type = Image.Type.Sliced;
-        divImg.color = accent;
+        divImg.color = uiAccentColor;
         divImg.raycastTarget = false;
 
-        // Rules body — one left-aligned block, key phrases in amber
+        // Rules body — centered, taupe with gold keywords (no bold spam).
         TMP_Text body = CreateUiText(cardRt, "RulesBody",
             new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
-            new Vector2(0f, -250f), new Vector2(760f, 560f), 46, TextAlignmentOptions.TopLeft);
-        body.color = ink;
+            new Vector2(0f, -300f), new Vector2(760f, 560f), 44, TextAlignmentOptions.Top);
+        body.color = taupe;
         body.enableWordWrapping = true;
-        body.lineSpacing = 16f;
+        body.lineSpacing = 18f;
         body.text =
-            "Fatten Kenzo to " + a0 + "75 kg" + a1 + " in " + a0 + "60 seconds" + a1 + ".\n\n" +
-            "Eat " + a0 + "treats" + a1 + " to pile on weight.\n\n" +
-            "Dodge " + a0 + "onions" + a1 + " — they slim you down.\n\n" +
-            a0 + "Swipe" + a1 + " left / right to switch lanes.";
+            "Fatten Kenzo to " + a0 + "75 kg" + a1 + " in " + a0 + "60 seconds" + a1 + "\n\n" +
+            "Eat " + a0 + "treats" + a1 + " to pile on weight\n\n" +
+            "Dodge " + a0 + "onions" + a1 + " — they slim you down\n\n" +
+            a0 + "Swipe" + a1 + " left / right to switch lanes";
+        ApplyFont(body);
 
-        // Amber TAP TO START pill at the bottom of the card
+        // Gold CTA at the bottom of the card — flat, tracked caps, dark label
+        // (the website's "Begin" button vocabulary).
         GameObject pill = new GameObject("RulesCta", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
         pill.layer = parent.gameObject.layer;
         pill.transform.SetParent(cardRt, false);
@@ -1596,7 +1616,7 @@ public class GameManager : MonoBehaviour
         rulesCtaPill.anchorMax = new Vector2(0.5f, 0f);
         rulesCtaPill.pivot = new Vector2(0.5f, 0f);
         rulesCtaPill.anchoredPosition = new Vector2(0f, 70f);
-        rulesCtaPill.sizeDelta = new Vector2(580f, 132f);
+        rulesCtaPill.sizeDelta = new Vector2(520f, 118f);
         Image pillImg = pill.GetComponent<Image>();
         pillImg.sprite = barPillSprite;
         pillImg.type = Image.Type.Sliced;
@@ -1613,11 +1633,12 @@ public class GameManager : MonoBehaviour
             sp.offsetMin = Vector2.zero;
             sp.offsetMax = Vector2.zero;
             startPromptText.enableAutoSizing = false;
-            startPromptText.fontSize = 58;
-            startPromptText.text = "<b>TAP TO START</b>";
+            startPromptText.fontSize = 42;
+            startPromptText.characterSpacing = 18f;
+            startPromptText.text = "TAP TO START";
             startPromptText.alignment = TextAlignmentOptions.Center;
             startPromptText.textWrappingMode = TextWrappingModes.NoWrap;
-            startPromptText.color = new Color(0.99f, 0.96f, 0.90f, 1f);
+            startPromptText.color = new Color(0.086f, 0.055f, 0.016f, 1f); // dark on gold
             ApplyFont(startPromptText);
         }
     }
@@ -1652,7 +1673,7 @@ public class GameManager : MonoBehaviour
         cardRect.sizeDelta = new Vector2(720f, 640f);
         gameOverCardRect = cardRect;
         Image cardImg = card.GetComponent<Image>();
-        cardImg.color = new Color(0.16f, 0.11f, 0.08f, 0.99f);
+        cardImg.color = new Color(0.122f, 0.094f, 0.075f, 0.99f); // #1f1813, same ink as the rules card
         ApplyRoundedCard(cardImg);
 
         // Circular icon badge straddling the card's top edge.
@@ -1832,7 +1853,7 @@ public class GameManager : MonoBehaviour
         {
             gameOverTitleText.text = won ? winTitle : loseTitle;
             gameOverTitleText.color = outcomeColor;
-            ApplyFont(gameOverTitleText);
+            ApplyDisplayFont(gameOverTitleText); // serif verdict, like the website's endings
         }
         if (gameOverAccent) gameOverAccent.color = outcomeColor;
 
@@ -1859,13 +1880,15 @@ public class GameManager : MonoBehaviour
         {
             gameOverNumber.text = finalWeight + " kg";
             gameOverNumber.color = outcomeColor;
-            ApplyFont(gameOverNumber);
+            ApplyDisplayFont(gameOverNumber); // the hero stat is a display moment
         }
         if (gameOverButtonBg) gameOverButtonBg.color = outcomeColor;
         if (gameOverHintText)
         {
             gameOverHintText.text = won ? "PLAY AGAIN" : "TRY AGAIN";
             gameOverHintText.color = uiShadowColor;
+            gameOverHintText.characterSpacing = 16f; // tracked caps, like the site's buttons
+            gameOverHintText.fontStyle = FontStyles.Normal;
             ApplyFont(gameOverHintText);
         }
 

@@ -53653,7 +53653,8 @@ MonoBehaviour:
   gameOverScoreText: {fileID: 0}
   gameOverBestText: {fileID: 0}
   gameOverHintText: {fileID: 0}
-  uiFont: {fileID: 11400000, guid: b231ebab6628d4782b6866a4a48d1398, type: 2}
+  uiFont: {fileID: 11400000, guid: 6cc33178a478e4d3a890eaa3b3e34aeb, type: 2}
+  uiDisplayFont: {fileID: 11400000, guid: 1742c3d07c8fd43fbbff85607dfa8eba, type: 2}
   timeLimit: 60
   winWeightKg: 75
   barFloorKg: 30
@@ -53661,13 +53662,13 @@ MonoBehaviour:
   timerText: {fileID: 0}
   weightText: {fileID: 0}
   showScoreHud: 0
-  uiTextColor: {r: 0.96, g: 0.93, b: 0.85, a: 1}
-  uiAccentColor: {r: 0.98, g: 0.7, b: 0.27, a: 1}
-  uiUrgentColor: {r: 0.95, g: 0.36, b: 0.3, a: 1}
-  uiShadowColor: {r: 0.16, g: 0.09, b: 0.05, a: 0.75}
-  uiBarTrackColor: {r: 0.2, g: 0.14, b: 0.1, a: 0.85}
+  uiTextColor: {r: 0.957, g: 0.906, b: 0.827, a: 1}
+  uiAccentColor: {r: 0.851, g: 0.604, b: 0.247, a: 1}
+  uiUrgentColor: {r: 0.878, g: 0.416, b: 0.353, a: 1}
+  uiShadowColor: {r: 0.086, g: 0.055, b: 0.016, a: 0.85}
+  uiBarTrackColor: {r: 0.1, g: 0.08, b: 0.06, a: 0.85}
   uiBarLowColor: {r: 0.55, g: 0.78, b: 0.42, a: 1}
-  uiBarFullColor: {r: 1, g: 0.83, b: 0.32, a: 1}
+  uiBarFullColor: {r: 0.886, g: 0.663, b: 0.306, a: 1}
   startPrompt: 'TAP TO START
 
     Don''t let mom catch her flight!'
