@@ -1621,7 +1621,7 @@ public class GameManager : MonoBehaviour
         body.text =
             "Fatten Kenzo to " + a0 + "75 kg" + a1 + " in " + a0 + "60 seconds" + a1 + "\n\n" +
             "Eat " + a0 + "treats" + a1 + " to pile on weight\n\n" +
-            "Dodge " + a0 + "onions" + a1 + " — they slim you down\n\n" +
+            "Dodge " + a0 + "veggies" + a1 + " — they slim you down\n\n" +
             a0 + "Swipe" + a1 + " left / right to switch lanes";
         ApplyFont(body);
 
