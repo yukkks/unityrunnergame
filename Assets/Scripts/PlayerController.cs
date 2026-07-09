@@ -178,15 +178,26 @@ public class PlayerController : MonoBehaviour
 
         SpawnCrashFx(splatColor);
 
+        // Floating "-Xkg" + drives the weight-bar red flash/shake.
+        if (GameManager.Instance) GameManager.Instance.ShowWeightDelta(-weightLoss, transform.position);
+
         if (AudioController.Instance) AudioController.Instance.PlayWhimper();
         if (!cameraFollow) cameraFollow = FindObjectOfType<CameraFollow>();
         if (cameraFollow) cameraFollow.Shake();
+    }
+
+    // A happy little hop — GameManager calls this each time Kenzo crosses a
+    // new weight milestone.
+    public void Celebrate()
+    {
+        hop = 1f;
     }
     void Start()
     {
         int maxLane = Mathf.Max(0, laneCount - 1);
         lane = Mathf.Clamp(startLane, 0, maxLane);
         EnsureThruster();
+        if (!GetComponent<BlobShadow>()) gameObject.AddComponent<BlobShadow>(); // contact shadow
 
         if (!dogModel)
         {
@@ -309,9 +320,13 @@ public class PlayerController : MonoBehaviour
 
         // 1) Chunky veggie bits — burst outward and fall under gravity.
         ParticleSystem chunks = fxObj.AddComponent<ParticleSystem>();
+        // A freshly added ParticleSystem auto-plays on awake; stop it so the
+        // burst below is the only emission. We intentionally do NOT set
+        // main.duration — Unity warns when duration is changed on a playing
+        // system, and a one-shot burst we Destroy after 2s doesn't need it.
+        chunks.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
         var cMain = chunks.main;
         cMain.loop = false;
-        cMain.duration = 0.5f;
         cMain.startLifetime = new ParticleSystem.MinMaxCurve(0.45f, 0.75f);
         cMain.startSpeed = new ParticleSystem.MinMaxCurve(2.5f, 5f);
         cMain.startSize = new ParticleSystem.MinMaxCurve(0.12f, 0.26f);
@@ -332,9 +347,9 @@ public class PlayerController : MonoBehaviour
         GameObject puffObj = new GameObject("CrashPuff");
         puffObj.transform.SetParent(fxObj.transform, false);
         ParticleSystem puff = puffObj.AddComponent<ParticleSystem>();
+        puff.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
         var pMain = puff.main;
         pMain.loop = false;
-        pMain.duration = 0.4f;
         pMain.startLifetime = 0.35f;
         pMain.startSpeed = new ParticleSystem.MinMaxCurve(0.6f, 1.4f);
         pMain.startSize = new ParticleSystem.MinMaxCurve(0.4f, 0.7f);

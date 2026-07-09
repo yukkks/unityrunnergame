@@ -1627,7 +1627,7 @@ MonoBehaviour:
   laneCount: 3
   spawnY: 0.8
   spawnZ: 28
-  coinY: 0.68
+  coinY: 0.9
   coinZ: 28
   coinDepthOffset: 4
   startMinInterval: 0.5
@@ -53622,6 +53622,7 @@ GameObject:
   m_Component:
   - component: {fileID: 812159843}
   - component: {fileID: 812159842}
+  - component: {fileID: 812159844}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -53678,7 +53679,7 @@ MonoBehaviour:
   loseMessage: "Not heavy enough in time\u2026\nOne more walk?"
   gameOverFontSize: 44
   overlayCornerRadius: 24
-  enableGlobalTopScore: 1
+  enableGlobalTopScore: 0
   supabaseUrl: https://axbzrtuvdwddixhbpdiz.supabase.co
   supabaseAnonKey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF4YnpydHV2ZHdkZGl4aGJwZGl6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5NTUwMzIsImV4cCI6MjA4ODUzMTAzMn0.BpuxVSfS2D9BxHM1vF6loDIANVPgSpxZT5mPXxvCreM
   supabaseTable: scores
@@ -53698,6 +53699,7 @@ MonoBehaviour:
   fogDensity: 0.008
   keyLight: {fileID: 0}
   keyLightIntensity: 1.35
+  keyLightShadowStrength: 0.35
   keyLightColor: {r: 0.95, g: 0.97, b: 1, a: 1}
   autoCreateRimLight: 1
   rimLightColor: {r: 0.35, g: 0.7, b: 1, a: 1}
@@ -53730,6 +53732,20 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &812159844
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 812159841}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bce2d414aff3d44629c9c76b504dae8d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SceneDressing
+  roadY: 0.45
+  toriiZ: 95
 --- !u!1 &816043237
 GameObject:
   m_ObjectHideFlags: 0
@@ -56517,8 +56533,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: 0
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: b231ebab6628d4782b6866a4a48d1398, type: 2}
+  m_sharedMaterial: {fileID: 8250701485543797803, guid: b231ebab6628d4782b6866a4a48d1398, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -92644,7 +92660,7 @@ MonoBehaviour:
   thrusterLocalOffset: {x: 0, y: 0.2, z: -0.4}
   crashFxPrefab: {fileID: 0}
   thrusterMaterial: {fileID: 0}
-  weightLoss: 8
+  weightLoss: 3
   dogModel: {fileID: 0}
   leanAngle: 16
   leanReturn: 9
@@ -92696,10 +92712,10 @@ CapsuleCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
-  m_Radius: 0.35
-  m_Height: 1.2
+  m_Radius: 0.7
+  m_Height: 3
   m_Direction: 1
-  m_Center: {x: 0, y: 0.6, z: 0}
+  m_Center: {x: 0, y: 1.3, z: 0}
 --- !u!23 &1482408552
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -103432,15 +103448,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6530698416122492178, guid: 8cafbd73d94c07440b05df1b95b81d92, type: 3}
       propertyPath: m_LocalScale.x
-      value: 9
+      value: 10.53
       objectReference: {fileID: 0}
     - target: {fileID: 6530698416122492178, guid: 8cafbd73d94c07440b05df1b95b81d92, type: 3}
       propertyPath: m_LocalScale.y
-      value: 5
+      value: 5.85
       objectReference: {fileID: 0}
     - target: {fileID: 6530698416122492178, guid: 8cafbd73d94c07440b05df1b95b81d92, type: 3}
       propertyPath: m_LocalScale.z
-      value: 5
+      value: 5.85
       objectReference: {fileID: 0}
     - target: {fileID: 6530698416122492178, guid: 8cafbd73d94c07440b05df1b95b81d92, type: 3}
       propertyPath: m_LocalPosition.x

@@ -8,6 +8,11 @@ public class ObstacleHit : MonoBehaviour
 {
     private bool hit;
 
+    void Awake()
+    {
+        if (!GetComponent<BlobShadow>()) gameObject.AddComponent<BlobShadow>(); // contact shadow
+    }
+
     void OnEnable()
     {
         // Reset per-life state so a pooled obstacle behaves like a fresh one.

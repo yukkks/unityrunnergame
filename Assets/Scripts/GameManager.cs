@@ -64,11 +64,11 @@ public class GameManager : MonoBehaviour
     [Tooltip("Soft drop-shadow color behind text — warm brown.")]
     public Color uiShadowColor = new Color(0.16f, 0.09f, 0.05f, 0.75f);
     [Tooltip("Weight bar track (empty) color — warm dark.")]
-    public Color uiBarTrackColor = new Color(0.20f, 0.14f, 0.10f, 0.85f);
+    public Color uiBarTrackColor = new Color(0.15f, 0.10f, 0.07f, 0.94f);
     [Tooltip("Weight bar fill at low fill — soft green.")]
-    public Color uiBarLowColor = new Color(0.55f, 0.78f, 0.42f, 1f);
+    public Color uiBarLowColor = new Color(0.46f, 0.83f, 0.40f, 1f);
     [Tooltip("Weight bar fill at full — warm gold.")]
-    public Color uiBarFullColor = new Color(1f, 0.83f, 0.32f, 1f);
+    public Color uiBarFullColor = new Color(1f, 0.80f, 0.30f, 1f);
 
     [Header("Farewell Text")]
     [TextArea] public string startPrompt = "TAP TO START\nDon't let mom catch her flight!";
@@ -174,6 +174,8 @@ public class GameManager : MonoBehaviour
     private Sprite barPillSprite;
     private Image timerPill;
     private RectTransform timerPillRoot;
+    private RectTransform rulesRoot;
+    private RectTransform rulesCtaPill;
     private Image gameOverAccent;
     private CanvasGroup gameOverGroup;
     private RectTransform gameOverCardRect;
@@ -185,6 +187,11 @@ public class GameManager : MonoBehaviour
     private float barFillDisplay;
     private float weightPunch;
     private float lastPunchWeight;
+    private float weightHitFlash;      // 0..1 red flash + shake when Kenzo is hit
+    private Vector2 weightBarBasePos;  // resting position of the bar (for shake)
+    private bool weightBarBaseCaptured;
+    private int lastMilestone = int.MinValue; // last 10kg mark Kenzo celebrated
+    private Vignette runtimeVignette;  // cached so the timer can pulse it red
     private bool punchInit;
     private Material fallbackMaterial;
     private float shaderFixUntil;
@@ -258,6 +265,11 @@ public class GameManager : MonoBehaviour
         }
         else if (State == GameState.Waiting)
         {
+            if (rulesCtaPill)
+            {
+                float s = 1f + 0.04f * Mathf.Sin(Time.unscaledTime * 4f);
+                rulesCtaPill.localScale = new Vector3(s, s, 1f);
+            }
             if (IsStartInput())
             {
                 StartRun();
@@ -464,6 +476,24 @@ public class GameManager : MonoBehaviour
                 ? Color.Lerp(uiBarTrackColor, new Color(0.42f, 0.12f, 0.10f, 0.92f), 0.7f)
                 : uiBarTrackColor;
         }
+
+        // Screen-edge red vignette pulse in the final seconds — panic you feel
+        // peripherally rather than read.
+        if (runtimeVignette != null)
+        {
+            if (urgent)
+            {
+                float vp = 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 10f);
+                runtimeVignette.intensity.value = Mathf.Lerp(vignetteIntensity, 0.52f, vp);
+                runtimeVignette.color.value = Color.Lerp(Color.black, new Color(0.72f, 0.10f, 0.08f), vp);
+            }
+            else
+            {
+                runtimeVignette.intensity.value = vignetteIntensity;
+                runtimeVignette.color.value = Color.black;
+            }
+        }
+
         float cur = dogWeight ? dogWeight.currentWeight : barFloorKg;
 
         // Punch the weight number whenever a treat is eaten (weight ticks up).
@@ -471,15 +501,23 @@ public class GameManager : MonoBehaviour
         if (cur > lastPunchWeight + 0.01f) weightPunch = 1f;
         lastPunchWeight = cur;
         weightPunch = Mathf.MoveTowards(weightPunch, 0f, Time.deltaTime * 3.5f);
+        weightHitFlash = Mathf.MoveTowards(weightHitFlash, 0f, Time.deltaTime * 2.2f);
+
+        // Kenzo does a happy hop + bark each time he crosses a new 10 kg mark.
+        int milestone = Mathf.FloorToInt(cur / 10f);
+        if (lastMilestone == int.MinValue) lastMilestone = milestone;
+        else if (milestone > lastMilestone) { lastMilestone = milestone; CelebrateMilestone(); }
 
         if (weightText)
         {
             weightText.text = Mathf.RoundToInt(cur) + " / " + Mathf.RoundToInt(winWeightKg) + " kg";
-            weightText.color = uiTextColor;
-            weightText.rectTransform.localScale = Vector3.one * (1f + 0.22f * weightPunch);
+            weightText.color = Color.Lerp(uiTextColor, uiUrgentColor, weightHitFlash);
+            weightText.rectTransform.localScale = Vector3.one * (1f + 0.22f * weightPunch + 0.12f * weightHitFlash);
         }
         if (weightBarFill && weightBarFillRect && weightBarRoot)
         {
+            if (!weightBarBaseCaptured) { weightBarBasePos = weightBarRoot.anchoredPosition; weightBarBaseCaptured = true; }
+
             float targetT = Mathf.Clamp01(Mathf.InverseLerp(barFloorKg, winWeightKg, cur));
             barFillDisplay = Mathf.Lerp(barFillDisplay, targetT, Time.deltaTime * 6f);
 
@@ -490,8 +528,12 @@ public class GameManager : MonoBehaviour
             float w = Mathf.Lerp(fillH, innerW, barFillDisplay); // fillH == pill cap diameter
             weightBarFillRect.sizeDelta = new Vector2(w, fillH);
 
-            // Soft pulse on the whole bar when a treat lands (juice).
-            weightBarRoot.localScale = Vector3.one * (1f + 0.05f * weightPunch);
+            // Soft pulse on a treat; a sharper punch + shake when Kenzo is hit.
+            weightBarRoot.localScale = Vector3.one * (1f + 0.05f * weightPunch + 0.06f * weightHitFlash);
+            Vector2 shake = weightHitFlash > 0.001f
+                ? new Vector2(Mathf.Sin(Time.unscaledTime * 90f), Mathf.Cos(Time.unscaledTime * 75f)) * 7f * weightHitFlash
+                : Vector2.zero;
+            weightBarRoot.anchoredPosition = weightBarBasePos + shake;
 
             // Green -> gold as it approaches the goal; flare brighter near full.
             Color baseCol = Color.Lerp(uiBarLowColor, uiBarFullColor, barFillDisplay);
@@ -500,8 +542,103 @@ public class GameManager : MonoBehaviour
                 float flare = (barFillDisplay - 0.85f) / 0.15f;
                 baseCol = Color.Lerp(baseCol, Color.white, 0.25f * flare * (0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 8f)));
             }
-            weightBarFill.color = baseCol;
+            // Flash the fill red on a hit.
+            weightBarFill.color = Color.Lerp(baseCol, uiUrgentColor, 0.85f * weightHitFlash);
         }
+    }
+
+    // Floating "+2 kg" / "-8 kg" that pops at the point of the chomp/hit and
+    // drifts up as it fades — the moment-to-moment read of the game's stakes.
+    public void ShowWeightDelta(float amount, Vector3 worldPos)
+    {
+        if (Mathf.Abs(amount) < 0.01f) return;
+        if (amount < 0f) weightHitFlash = 1f; // drive the bar red-flash + shake
+
+        if (!hudCanvas) return;
+        Camera cam = Camera.main;
+        if (!cam) return;
+        RectTransform canvasRect = hudCanvas.transform as RectTransform;
+        if (!canvasRect) return;
+
+        Vector3 screen = cam.WorldToScreenPoint(worldPos + Vector3.up * 1.0f);
+        if (screen.z < 0f) return; // behind the camera
+        Camera uiCam = hudCanvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : hudCanvas.worldCamera;
+        Vector2 local;
+        if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, screen, uiCam, out local)) return;
+
+        bool gain = amount > 0f;
+        TMP_Text t = CreateUiText(canvasRect, "WeightDelta",
+            new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
+            local, new Vector2(220f, 84f), 54, TextAlignmentOptions.Center);
+        t.text = (gain ? "+" : "") + Mathf.RoundToInt(amount) + " kg";
+        t.color = gain ? uiBarLowColor : uiUrgentColor;
+        t.fontStyle = FontStyles.Bold;
+        t.raycastTarget = false;
+        ApplyFont(t);
+        ApplyTextOutline(t, uiShadowColor, 0.25f);
+        StartCoroutine(FloatDelta(t, local));
+    }
+
+    System.Collections.IEnumerator FloatDelta(TMP_Text t, Vector2 startLocal)
+    {
+        if (!t) yield break;
+        RectTransform rt = t.rectTransform;
+        Color c = t.color;
+        float dur = 0.85f, el = 0f;
+        while (el < dur && t)
+        {
+            float p = el / dur;
+            rt.anchoredPosition = startLocal + new Vector2(0f, 72f * p);
+            float pop = p < 0.18f ? Mathf.Lerp(0.5f, 1.18f, p / 0.18f) : Mathf.Lerp(1.18f, 1f, (p - 0.18f) / 0.82f);
+            rt.localScale = Vector3.one * pop;
+            c.a = 1f - Mathf.Clamp01((p - 0.45f) / 0.55f);
+            t.color = c;
+            el += Time.unscaledDeltaTime;
+            yield return null;
+        }
+        if (t) Destroy(t.gameObject);
+    }
+
+    void CelebrateMilestone()
+    {
+        var pc = FindObjectOfType<PlayerController>();
+        if (pc) pc.Celebrate();
+        if (audioController) audioController.PlayBark();
+    }
+
+    // A one-time "swipe to move" hint at the start of each run — teaches the
+    // core control by showing, then fades so it never nags.
+    public void ShowSwipeHint()
+    {
+        StartCoroutine(SwipeHintRoutine());
+    }
+
+    System.Collections.IEnumerator SwipeHintRoutine()
+    {
+        if (!hudCanvas) yield break;
+        Transform parent = hudSafeArea ? (Transform)hudSafeArea : hudCanvas.transform;
+        TMP_Text hint = CreateUiText(parent, "SwipeHint",
+            new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
+            new Vector2(0f, 300f), new Vector2(760f, 96f), 46, TextAlignmentOptions.Center);
+        hint.text = "‹  swipe to move  ›";
+        hint.color = uiTextColor;
+        hint.fontStyle = FontStyles.Bold;
+        hint.raycastTarget = false;
+        ApplyFont(hint);
+        ApplyTextOutline(hint, uiShadowColor, 0.22f);
+
+        float dur = 3.2f, el = 0f;
+        Color c = hint.color;
+        while (el < dur && IsRunning && hint)
+        {
+            float p = el / dur;
+            hint.rectTransform.localScale = Vector3.one * (1f + 0.05f * Mathf.Sin(Time.unscaledTime * 6f));
+            c.a = 1f - Mathf.Clamp01((p - 0.6f) / 0.4f); // hold, then fade over the last 40%
+            hint.color = c;
+            el += Time.unscaledDeltaTime;
+            yield return null;
+        }
+        if (hint) Destroy(hint.gameObject);
     }
 
     void EnsureUi()
@@ -579,23 +716,23 @@ public class GameManager : MonoBehaviour
 
         EnsureWeightBar(hudParent);
 
-        // Center the kg readout INSIDE the bar (mobile-game convention) so the
-        // number and the progress it represents read as one element.
+        // Right-align the kg readout inside the bar so it sits on the dark
+        // remaining-track instead of straddling the moving fill edge.
         {
             weightText.transform.SetParent(weightBarRoot, false);
             RectTransform wt = weightText.rectTransform;
             wt.anchorMin = Vector2.zero;
             wt.anchorMax = Vector2.one;
-            wt.offsetMin = Vector2.zero;
-            wt.offsetMax = Vector2.zero;
-            weightText.fontSize = 30;
+            wt.offsetMin = new Vector2(0f, 0f);
+            wt.offsetMax = new Vector2(-30f, 0f);
+            weightText.fontSize = 32;
             weightText.fontStyle = FontStyles.Bold;
             weightText.transform.SetAsLastSibling(); // above the fill
         }
-        StyleHudText(weightText, TextAlignmentOptions.Center);
+        StyleHudText(weightText, TextAlignmentOptions.MidlineRight);
         weightText.fontStyle = FontStyles.Bold;
-        // The kg text overlaps both the dark track and the light fill — a dark
-        // outline keeps the cream text legible across both.
+        // Soft dark outline keeps the cream readout legible over the dark track
+        // (and the gold fill it sits on once near full).
         ApplyTextOutline(weightText, uiShadowColor, 0.2f);
 
         if (!startPromptText)
@@ -626,6 +763,10 @@ public class GameManager : MonoBehaviour
         startPromptText.fontSizeMax = 86f;
         startPromptText.lineSpacing = 8f;
         StyleHudText(startPromptText, TextAlignmentOptions.Center, true);
+
+        // Rules / tutorial card shown during the Waiting state (reparents the
+        // start prompt into its amber CTA pill).
+        EnsureRulesCard(hudParent);
 
         if (!showScoreHud)
         {
@@ -939,6 +1080,7 @@ public class GameManager : MonoBehaviour
         }
         vignette.intensity.value = vignetteIntensity;
         vignette.smoothness.value = 0.6f;
+        runtimeVignette = vignette; // pulsed red in the final seconds (UpdateGoalUi)
 
         if (!profile.TryGet(out FilmGrain grain))
         {
@@ -1123,6 +1265,29 @@ public class GameManager : MonoBehaviour
         return value.Replace("\\", "\\\\").Replace("\"", "\\\"");
     }
 
+    // Lifts a HUD pill off the busy scene: a soft warm drop shadow, and an
+    // optional thin cream stroke so it reads as the same "paper UI" family as
+    // the rules card / wrapper site.
+    void StylePill(Image img, bool creamStroke = true)
+    {
+        if (!img) return;
+
+        UnityEngine.UI.Shadow shadow = img.gameObject.GetComponent<UnityEngine.UI.Shadow>();
+        if (!shadow) shadow = img.gameObject.AddComponent<UnityEngine.UI.Shadow>();
+        shadow.effectColor = new Color(0.08f, 0.05f, 0.03f, 0.55f);
+        shadow.effectDistance = new Vector2(0f, -6f);
+        shadow.useGraphicAlpha = true;
+
+        if (creamStroke)
+        {
+            UnityEngine.UI.Outline outline = img.gameObject.GetComponent<UnityEngine.UI.Outline>();
+            if (!outline) outline = img.gameObject.AddComponent<UnityEngine.UI.Outline>();
+            outline.effectColor = new Color(0.97f, 0.93f, 0.85f, 0.92f);
+            outline.effectDistance = new Vector2(2f, 2f);
+            outline.useGraphicAlpha = true;
+        }
+    }
+
     void EnsureTimerPill()
     {
         if (timerPill || !timerText) return;
@@ -1134,9 +1299,10 @@ public class GameManager : MonoBehaviour
         timerRt.anchorMin = new Vector2(1f, 1f);
         timerRt.anchorMax = new Vector2(1f, 1f);
         timerRt.pivot = new Vector2(1f, 1f);
-        timerRt.anchoredPosition = new Vector2(-26f, -26f);
-        timerRt.sizeDelta = new Vector2(132f, 64f);
-        timerText.fontSize = 40;
+        timerRt.anchoredPosition = new Vector2(-28f, -28f);
+        timerRt.sizeDelta = new Vector2(168f, 84f);
+        timerText.fontSize = 52;
+        timerText.fontStyle = FontStyles.Bold;
 
         GameObject pill = new GameObject("TimerPill", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
         pill.transform.SetParent(timerText.transform.parent, false);
@@ -1145,12 +1311,13 @@ public class GameManager : MonoBehaviour
         timerPillRoot.anchorMax = new Vector2(1f, 1f);
         timerPillRoot.pivot = new Vector2(1f, 1f);
         timerPillRoot.anchoredPosition = new Vector2(-20f, -20f);
-        timerPillRoot.sizeDelta = new Vector2(144f, 76f);
+        timerPillRoot.sizeDelta = new Vector2(184f, 100f);
 
         timerPill = pill.GetComponent<Image>();
         timerPill.raycastTarget = false;
         timerPill.color = uiBarTrackColor;
         if (barPillSprite) { timerPill.sprite = barPillSprite; timerPill.type = Image.Type.Sliced; }
+        StylePill(timerPill);
 
         // Render behind the timer text.
         timerPillRoot.SetSiblingIndex(timerText.transform.GetSiblingIndex());
@@ -1167,8 +1334,8 @@ public class GameManager : MonoBehaviour
         weightBarRoot.anchorMin = new Vector2(0.5f, 1f);
         weightBarRoot.anchorMax = new Vector2(0.5f, 1f);
         weightBarRoot.pivot = new Vector2(0.5f, 1f);
-        weightBarRoot.anchoredPosition = new Vector2(0f, -70f);
-        weightBarRoot.sizeDelta = new Vector2(640f, 58f);
+        weightBarRoot.anchoredPosition = new Vector2(0f, -64f);
+        weightBarRoot.sizeDelta = new Vector2(560f, 68f);
 
         GameObject track = new GameObject("Track", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
         track.transform.SetParent(root.transform, false);
@@ -1181,6 +1348,7 @@ public class GameManager : MonoBehaviour
         weightBarBg.raycastTarget = false;
         weightBarBg.color = uiBarTrackColor;
         if (barPillSprite) { weightBarBg.sprite = barPillSprite; weightBarBg.type = Image.Type.Sliced; }
+        StylePill(weightBarBg);
 
         // Fill is a left-anchored rounded pill whose WIDTH animates (in
         // UpdateGoalUi). A sliced sprite + width keeps clean rounded ends —
@@ -1213,6 +1381,7 @@ public class GameManager : MonoBehaviour
         badgeImg.raycastTarget = false;
         badgeImg.color = uiAccentColor;
         if (barPillSprite) { badgeImg.sprite = barPillSprite; badgeImg.type = Image.Type.Sliced; }
+        StylePill(badgeImg, false);
 
         // Paw drawn procedurally (the Fredoka UI font has no emoji glyphs).
         GameObject pawObj = new GameObject("Paw", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
@@ -1326,6 +1495,131 @@ public class GameManager : MonoBehaviour
 
         Vector4 border = new Vector4(r, r, r, r);
         return Sprite.Create(tex, new Rect(0, 0, width, height), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, border);
+    }
+
+    // A cream "HOW TO PLAY" card on a dimmed backdrop, shown while Waiting.
+    // Explains the goal/treats/onions/controls and ends in an amber TAP TO START
+    // pill (the existing startPromptText, reparented in as the label).
+    void EnsureRulesCard(RectTransform parent)
+    {
+        if (!parent) return;
+        if (rulesRoot)
+        {
+            if (rulesRoot.parent != parent) rulesRoot.SetParent(parent, false);
+            return;
+        }
+
+        if (!roundedCardSprite) roundedCardSprite = CreateRoundedSprite(96, 96, 40);
+        if (!barPillSprite) barPillSprite = CreateRoundedSprite(64, 32, 16);
+
+        // Warm ink + accent tuned for the cream card (the HUD's cream text colors
+        // would be invisible here).
+        Color ink = new Color(0.26f, 0.17f, 0.10f, 1f);
+        Color accent = new Color(0.85f, 0.49f, 0.12f, 1f);
+        string accentHex = ColorUtility.ToHtmlStringRGB(accent);
+        string a0 = "<color=#" + accentHex + "><b>";
+        string a1 = "</b></color>";
+
+        // Full-screen dim backdrop
+        GameObject root = new GameObject("RulesOverlay", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        root.layer = parent.gameObject.layer;
+        root.transform.SetParent(parent, false);
+        rulesRoot = root.GetComponent<RectTransform>();
+        rulesRoot.anchorMin = Vector2.zero;
+        rulesRoot.anchorMax = Vector2.one;
+        rulesRoot.offsetMin = Vector2.zero;
+        rulesRoot.offsetMax = Vector2.zero;
+        Image dim = root.GetComponent<Image>();
+        dim.color = new Color(0.04f, 0.03f, 0.02f, 0.6f);
+        dim.raycastTarget = false;
+
+        // Cream card
+        GameObject card = new GameObject("RulesCard", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        card.layer = parent.gameObject.layer;
+        card.transform.SetParent(rulesRoot, false);
+        RectTransform cardRt = card.GetComponent<RectTransform>();
+        cardRt.anchorMin = new Vector2(0.5f, 0.5f);
+        cardRt.anchorMax = new Vector2(0.5f, 0.5f);
+        cardRt.pivot = new Vector2(0.5f, 0.5f);
+        cardRt.anchoredPosition = new Vector2(0f, 60f);
+        cardRt.sizeDelta = new Vector2(900f, 1040f);
+        Image cardImg = card.GetComponent<Image>();
+        cardImg.sprite = roundedCardSprite;
+        cardImg.type = Image.Type.Sliced;
+        cardImg.color = new Color(0.97f, 0.93f, 0.85f, 1f);
+        cardImg.raycastTarget = false;
+
+        // Title
+        TMP_Text title = CreateUiText(cardRt, "RulesTitle",
+            new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+            new Vector2(0f, -80f), new Vector2(820f, 120f), 78, TextAlignmentOptions.Center);
+        title.text = "HOW TO PLAY";
+        title.fontStyle = FontStyles.Bold;
+        title.color = ink;
+        title.enableWordWrapping = false;
+
+        // Amber divider under the title
+        GameObject div = new GameObject("RulesDivider", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        div.layer = parent.gameObject.layer;
+        div.transform.SetParent(cardRt, false);
+        RectTransform divRt = div.GetComponent<RectTransform>();
+        divRt.anchorMin = new Vector2(0.5f, 1f);
+        divRt.anchorMax = new Vector2(0.5f, 1f);
+        divRt.pivot = new Vector2(0.5f, 1f);
+        divRt.anchoredPosition = new Vector2(0f, -200f);
+        divRt.sizeDelta = new Vector2(380f, 9f);
+        Image divImg = div.GetComponent<Image>();
+        divImg.sprite = barPillSprite;
+        divImg.type = Image.Type.Sliced;
+        divImg.color = accent;
+        divImg.raycastTarget = false;
+
+        // Rules body — one left-aligned block, key phrases in amber
+        TMP_Text body = CreateUiText(cardRt, "RulesBody",
+            new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+            new Vector2(0f, -250f), new Vector2(760f, 560f), 46, TextAlignmentOptions.TopLeft);
+        body.color = ink;
+        body.enableWordWrapping = true;
+        body.lineSpacing = 16f;
+        body.text =
+            "Fatten Kenzo to " + a0 + "75 kg" + a1 + " in " + a0 + "60 seconds" + a1 + ".\n\n" +
+            "Eat " + a0 + "treats" + a1 + " to pile on weight.\n\n" +
+            "Dodge " + a0 + "onions" + a1 + " — they slim you down.\n\n" +
+            a0 + "Swipe" + a1 + " left / right to switch lanes.";
+
+        // Amber TAP TO START pill at the bottom of the card
+        GameObject pill = new GameObject("RulesCta", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+        pill.layer = parent.gameObject.layer;
+        pill.transform.SetParent(cardRt, false);
+        rulesCtaPill = pill.GetComponent<RectTransform>();
+        rulesCtaPill.anchorMin = new Vector2(0.5f, 0f);
+        rulesCtaPill.anchorMax = new Vector2(0.5f, 0f);
+        rulesCtaPill.pivot = new Vector2(0.5f, 0f);
+        rulesCtaPill.anchoredPosition = new Vector2(0f, 70f);
+        rulesCtaPill.sizeDelta = new Vector2(580f, 132f);
+        Image pillImg = pill.GetComponent<Image>();
+        pillImg.sprite = barPillSprite;
+        pillImg.type = Image.Type.Sliced;
+        pillImg.color = uiAccentColor;
+        pillImg.raycastTarget = false;
+
+        // Reuse the existing start prompt as the pill's label.
+        if (startPromptText)
+        {
+            startPromptText.transform.SetParent(rulesCtaPill, false);
+            RectTransform sp = startPromptText.rectTransform;
+            sp.anchorMin = Vector2.zero;
+            sp.anchorMax = Vector2.one;
+            sp.offsetMin = Vector2.zero;
+            sp.offsetMax = Vector2.zero;
+            startPromptText.enableAutoSizing = false;
+            startPromptText.fontSize = 58;
+            startPromptText.text = "<b>TAP TO START</b>";
+            startPromptText.alignment = TextAlignmentOptions.Center;
+            startPromptText.textWrappingMode = TextWrappingModes.NoWrap;
+            startPromptText.color = new Color(0.99f, 0.96f, 0.90f, 1f);
+            ApplyFont(startPromptText);
+        }
     }
 
     void EnsureGameOverUi(Transform canvas)
@@ -1549,7 +1843,15 @@ public class GameManager : MonoBehaviour
 
         if (gameOverScoreText)
         {
-            gameOverScoreText.text = won ? winMessage : loseMessage;
+            string flavor = won ? winMessage : loseMessage;
+            if (!won)
+            {
+                // Near-miss framing turns a loss into a hook: show how close Kenzo got.
+                int toGo = Mathf.CeilToInt(winWeightKg - finalWeight);
+                if (finalWeight > Mathf.RoundToInt(barFloorKg) && toGo > 0)
+                    flavor = "So close — only " + toGo + " kg to go!\nOne more walk?";
+            }
+            gameOverScoreText.text = flavor;
             gameOverScoreText.fontSize = Mathf.RoundToInt(gameOverFontSize * 0.62f);
             ApplyFont(gameOverScoreText);
         }
@@ -1568,12 +1870,37 @@ public class GameManager : MonoBehaviour
         }
 
         // On a win, the celebration image takes over the card's middle: show it,
-        // hide the paw badge + flavor message so they don't overlap. The title
-        // and the final-weight number still read above/below it.
+        // hide the paw badge + flavor message + divider so nothing overlaps, and
+        // restack the title cleanly above the image and the weight number below
+        // it. On a loss (no image) restore the original single-column layout.
         bool showWin = won && gameOverWinImage && gameOverWinImage.texture;
         if (gameOverWinImage) gameOverWinImage.gameObject.SetActive(showWin);
         if (gameOverIconBadge) gameOverIconBadge.gameObject.SetActive(!showWin);
         if (gameOverScoreText) gameOverScoreText.gameObject.SetActive(!showWin);
+        if (gameOverAccent) gameOverAccent.gameObject.SetActive(!showWin);
+
+        if (showWin)
+        {
+            SetCardTop(gameOverTitleText, -46f);
+            RectTransform wi = gameOverWinImage.rectTransform;
+            wi.sizeDelta = new Vector2(520f, 260f);
+            wi.anchoredPosition = new Vector2(0f, -120f);
+            SetCardTop(gameOverNumber, -395f);
+        }
+        else
+        {
+            SetCardTop(gameOverTitleText, -110f);
+            SetCardTop(gameOverNumber, -370f);
+        }
+    }
+
+    // Position a top-anchored card text by its Y offset from the card's top edge.
+    void SetCardTop(TMP_Text text, float y)
+    {
+        if (!text) return;
+        RectTransform rt = text.rectTransform;
+        Vector2 p = rt.anchoredPosition;
+        rt.anchoredPosition = new Vector2(p.x, y);
     }
 
     void StartRun()
@@ -1584,6 +1911,13 @@ public class GameManager : MonoBehaviour
         moveSpeed = startSpeed;
         won = false;
         timeRemaining = timeLimit;
+        weightHitFlash = 0f;
+        lastMilestone = int.MinValue;
+        if (runtimeVignette != null)
+        {
+            runtimeVignette.intensity.value = vignetteIntensity;
+            runtimeVignette.color.value = Color.black;
+        }
         if (!dogWeight) dogWeight = FindObjectOfType<DogWeightVisual>();
         float startW = dogWeight ? dogWeight.currentWeight : barFloorKg;
         barFillDisplay = Mathf.Clamp01(Mathf.InverseLerp(barFloorKg, winWeightKg, startW));
@@ -1593,6 +1927,7 @@ public class GameManager : MonoBehaviour
         UpdateUi();
         UpdateGoalUi();
         SetState(GameState.Running);
+        ShowSwipeHint();
     }
 
     void SetState(GameState newState)
@@ -1600,6 +1935,7 @@ public class GameManager : MonoBehaviour
         State = newState;
         IsRunning = (State == GameState.Running);
 
+        if (rulesRoot) rulesRoot.gameObject.SetActive(State == GameState.Waiting);
         if (startPromptText) startPromptText.gameObject.SetActive(State == GameState.Waiting);
         if (gameOverPanel) gameOverPanel.SetActive(State == GameState.GameOver);
         if (timerText) timerText.gameObject.SetActive(IsRunning);

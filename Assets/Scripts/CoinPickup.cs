@@ -8,6 +8,16 @@ public class CoinPickup : MonoBehaviour
     [Tooltip("Kilograms gained per treat eaten.")]
     public float weightGain = 2f;
 
+    [Header("Idle Motion")]
+    [Tooltip("Degrees/sec the treat turns around its vertical axis (turntable read).")]
+    public float yawSpeed = 55f;
+    [Tooltip("Hover height (world units) above/below the spawn height.")]
+    public float bobAmplitude = 0.12f;
+    [Tooltip("Hover cycles per second.")]
+    public float bobSpeed = 2.6f;
+    private float baseY;
+    private float bobPhase;
+
     [Header("Pickup Animation")]
     public float pickupDuration = 0.35f;
     public float pickupFloat = 0.5f;
@@ -24,6 +34,7 @@ public class CoinPickup : MonoBehaviour
 
     void Awake()
     {
+        if (!GetComponent<BlobShadow>()) gameObject.AddComponent<BlobShadow>(); // contact shadow
         cachedRenderer = GetComponent<Renderer>();
         cachedMeshFilter = GetComponent<MeshFilter>();
         if (cachedRenderer)
@@ -48,7 +59,17 @@ public class CoinPickup : MonoBehaviour
 
         float s = GameManager.Instance ? GameManager.Instance.moveSpeed : 12f;
         transform.Translate(Vector3.back * s * Time.deltaTime, Space.World);
-        transform.Rotate(Vector3.forward, rotateSpeed * Time.deltaTime, Space.Self);
+
+        // Turntable spin + gentle hover so the treat reads as a pick-me-up
+        // collectible, not scenery. rotateSpeed drives the old coin's face-spin
+        // (0 for the steak); the steak uses the vertical-axis turntable below.
+        if (rotateSpeed != 0f)
+            transform.Rotate(Vector3.forward, rotateSpeed * Time.deltaTime, Space.Self);
+        transform.Rotate(Vector3.up, yawSpeed * Time.deltaTime, Space.World);
+        bobPhase += bobSpeed * Time.deltaTime;
+        Vector3 bp = transform.position;
+        bp.y = baseY + Mathf.Sin(bobPhase) * bobAmplitude;
+        transform.position = bp;
 
         if (transform.position.z < destroyZ)
         {
@@ -67,6 +88,8 @@ public class CoinPickup : MonoBehaviour
             cachedRenderer.enabled = true;
             cachedRenderer.SetPropertyBlock(null);
         }
+        baseY = transform.position.y;
+        bobPhase = Random.value * Mathf.PI * 2f; // desync hover across treats
     }
     void OnTriggerEnter(Collider other)
     {
@@ -84,6 +107,7 @@ public class CoinPickup : MonoBehaviour
         if (GameManager.Instance)
         {
             GameManager.Instance.AddScore(points);
+            GameManager.Instance.ShowWeightDelta(weightGain, transform.position); // floating "+Xkg"
         }
 
         if (AudioController.Instance)
